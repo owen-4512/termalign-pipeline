@@ -74,6 +74,7 @@ class BertTermExtractor:
         current_scores: List[float] = []
         current_start: int | None = None
         current_end: int | None = None
+        current_label: str | None = None
 
         for idx, (label_id, offset) in enumerate(zip(labels, offsets)):
             start, end = offset
@@ -83,28 +84,45 @@ class BertTermExtractor:
                     current_scores = []
                     current_start = None
                     current_end = None
+                    current_label = None
                 continue
 
             label = id2label[label_id]
             score = probs[idx][label_id].item()
-            is_start = label.startswith("B-")
-            is_inside = label.startswith("I-")
+            label_type = label.split("-", 1)[1] if "-" in label else label
+            is_start = label.startswith("B-") or label == "B"
+            is_inside = label.startswith("I-") or label == "I"
 
             if is_start or (is_inside and not current_scores):
-                if current_scores:
-                    results.append(self._flush(sentence, current_scores, current_start, current_end, source_label))
-                current_scores = [score]
-                current_start = start
-                current_end = end
+                if current_scores and self._is_joinable_gap(sentence, current_end, start) and label_type == current_label:
+                    current_scores.append(score)
+                    current_end = end
+                else:
+                    if current_scores:
+                        results.append(
+                            self._flush(sentence, current_scores, current_start, current_end, source_label)
+                        )
+                    current_scores = [score]
+                    current_start = start
+                    current_end = end
+                    current_label = label_type
             elif is_inside and current_scores:
-                current_scores.append(score)
-                current_end = end
+                if label_type != current_label:
+                    results.append(self._flush(sentence, current_scores, current_start, current_end, source_label))
+                    current_scores = [score]
+                    current_start = start
+                    current_end = end
+                    current_label = label_type
+                else:
+                    current_scores.append(score)
+                    current_end = end
             else:
                 if current_scores:
                     results.append(self._flush(sentence, current_scores, current_start, current_end, source_label))
                     current_scores = []
                     current_start = None
                     current_end = None
+                    current_label = None
 
         if current_scores:
             results.append(self._flush(sentence, current_scores, current_start, current_end, source_label))
@@ -166,3 +184,12 @@ class BertTermExtractor:
             return "", start_index, start_index
 
         return term_text, start_index, end_index
+
+    @staticmethod
+    def _is_joinable_gap(sentence: str, current_end: int | None, next_start: int) -> bool:
+        if current_end is None:
+            return False
+        if next_start <= current_end:
+            return True
+        gap = sentence[current_end:next_start]
+        return bool(gap) and all(not char.isalnum() for char in gap)

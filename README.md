@@ -53,6 +53,7 @@ Alignment columns:
 - If you only have one BERT model, you can pass the same path for both `--bert-model-zh` and `--bert-model-en`.
 - If you want to skip BERT extraction, pass `--skip-bert`.
 - BERT extraction requires a fast tokenizer (most Hugging Face tokenizers are fast by default).
+- The extractor always uses the tokenizer that is bundled with the fine-tuned model path you provide.
 
 ## Installation
 ```bash
