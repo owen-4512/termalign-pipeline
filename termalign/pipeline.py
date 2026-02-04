@@ -16,6 +16,35 @@ def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, 
     return {(occ.start, occ.end, occ.sentence) for occ in occurrences}
 
 
+def _normalize_en_sentence(sentence: str) -> str:
+    return " ".join(sentence.replace("\r", " ").replace("\n", " ").split())
+
+
+def _filter_en_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
+    filtered = [term for term in terms if len(term.term.strip()) > 2]
+    by_sentence: dict[str, List[TermOccurrence]] = {}
+    for term in filtered:
+        by_sentence.setdefault(term.sentence, []).append(term)
+
+    results: List[TermOccurrence] = []
+    for sentence, sentence_terms in by_sentence.items():
+        sorted_terms = sorted(
+            sentence_terms,
+            key=lambda item: (-(item.end - item.start), item.start),
+        )
+        kept: List[TermOccurrence] = []
+        for candidate in sorted_terms:
+            overlap = False
+            for existing in kept:
+                if candidate.start < existing.end and candidate.end > existing.start:
+                    overlap = True
+                    break
+            if not overlap:
+                kept.append(candidate)
+        results.extend(sorted(kept, key=lambda item: item.start))
+    return results
+
+
 def extract_terms(
     pairs: Sequence[SentencePair],
     dict_terms: Sequence[str] | None,
@@ -85,8 +114,11 @@ def run_pipeline(
     normalized_pairs = [
         SentencePair(zh=converter_t2s.convert(pair.zh), en=pair.en) for pair in pairs
     ]
+    en_pairs = [SentencePair(zh=pair.zh, en=_normalize_en_sentence(pair.en)) for pair in pairs]
+
     zh_terms = extract_terms(normalized_pairs, dict_zh, bert_model_zh, "zh", skip_bert)
-    en_terms = extract_terms(pairs, dict_en, bert_model_en, "en", skip_bert)
+    en_terms = extract_terms(en_pairs, dict_en, bert_model_en, "en", skip_bert)
+    en_terms = _filter_en_terms(en_terms)
 
     write_tsv(
         output_path / "terms_zh.tsv",

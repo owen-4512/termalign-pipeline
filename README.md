@@ -56,6 +56,7 @@ Alignment columns:
 - The extractor always uses the tokenizer that is bundled with the fine-tuned model path you provide.
 - Dictionary paths are optional; omit them to disable dictionary matching.
 - English dictionary matching is case-insensitive and uses whole-word boundaries to avoid false positives from lowercase abbreviations.
+- English term output ignores newlines, drops terms with length ≤ 2, and keeps only the longest overlapping term per sentence.
 
 ## Installation
 ```bash
