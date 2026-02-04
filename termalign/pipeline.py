@@ -93,6 +93,13 @@ def build_alignment(
     return align_terms(zh_terms, en_terms, embedder)
 
 
+def _group_terms_by_sentence(terms: List[TermOccurrence]) -> dict[str, List[TermOccurrence]]:
+    grouped: dict[str, List[TermOccurrence]] = {}
+    for term in terms:
+        grouped.setdefault(term.sentence, []).append(term)
+    return grouped
+
+
 def run_pipeline(
     input_path: str | Path,
     dict_zh_path: str | Path | None,
@@ -125,6 +132,9 @@ def run_pipeline(
     zh_terms = _keep_longest_non_overlapping(zh_terms)
     en_terms = _filter_en_terms(en_terms)
 
+    zh_terms_by_sentence = _group_terms_by_sentence(zh_terms)
+    en_terms_by_sentence = _group_terms_by_sentence(en_terms)
+
     write_tsv(
         output_path / "terms_zh.tsv",
         [
@@ -150,7 +160,15 @@ def run_pipeline(
         ],
     )
 
-    alignments = build_alignment(zh_terms, en_terms, embed_model)
+    alignments: List[AlignmentResult] = []
+    for pair in zip(normalized_pairs, en_pairs):
+        zh_sentence = pair[0].zh
+        en_sentence = pair[1].en
+        zh_group = zh_terms_by_sentence.get(zh_sentence, [])
+        en_group = en_terms_by_sentence.get(en_sentence, [])
+        if not zh_group or not en_group:
+            continue
+        alignments.extend(build_alignment(zh_group, en_group, embed_model))
     write_tsv(
         output_path / "alignments.tsv",
         [

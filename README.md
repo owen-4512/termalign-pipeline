@@ -58,6 +58,7 @@ Alignment columns:
 - English dictionary matching is case-insensitive and uses whole-word boundaries to avoid false positives from lowercase abbreviations.
 - English term output ignores newlines, drops terms with length ≤ 2, and keeps only the longest overlapping term per sentence.
 - Chinese term output keeps only the longest overlapping term per sentence.
+- Alignment only pairs terms within the same input sentence pair (no cross-sentence alignment).
 
 ## Installation
 ```bash
