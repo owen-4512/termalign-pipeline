@@ -20,14 +20,13 @@ def _normalize_en_sentence(sentence: str) -> str:
     return " ".join(sentence.replace("\r", " ").replace("\n", " ").split())
 
 
-def _filter_en_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
-    filtered = [term for term in terms if len(term.term.strip()) > 2]
+def _keep_longest_non_overlapping(terms: List[TermOccurrence]) -> List[TermOccurrence]:
     by_sentence: dict[str, List[TermOccurrence]] = {}
-    for term in filtered:
+    for term in terms:
         by_sentence.setdefault(term.sentence, []).append(term)
 
     results: List[TermOccurrence] = []
-    for sentence, sentence_terms in by_sentence.items():
+    for sentence_terms in by_sentence.values():
         sorted_terms = sorted(
             sentence_terms,
             key=lambda item: (-(item.end - item.start), item.start),
@@ -43,6 +42,11 @@ def _filter_en_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
                 kept.append(candidate)
         results.extend(sorted(kept, key=lambda item: item.start))
     return results
+
+
+def _filter_en_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
+    filtered = [term for term in terms if len(term.term.strip()) > 2]
+    return _keep_longest_non_overlapping(filtered)
 
 
 def extract_terms(
@@ -118,6 +122,7 @@ def run_pipeline(
 
     zh_terms = extract_terms(normalized_pairs, dict_zh, bert_model_zh, "zh", skip_bert)
     en_terms = extract_terms(en_pairs, dict_en, bert_model_en, "en", skip_bert)
+    zh_terms = _keep_longest_non_overlapping(zh_terms)
     en_terms = _filter_en_terms(en_terms)
 
     write_tsv(
