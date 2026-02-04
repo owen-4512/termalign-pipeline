@@ -14,10 +14,10 @@ class SentencePair:
 
 
 def read_sentence_pairs(path: str | Path) -> List[SentencePair]:
-    df = pd.read_csv(path)
-    if "zh" not in df.columns or "en" not in df.columns:
-        raise ValueError("Input CSV must contain 'zh' and 'en' columns")
-    pairs = [SentencePair(zh=str(row["zh"]), en=str(row["en"])) for _, row in df.iterrows()]
+    df = pd.read_csv(path, sep="\t")
+    if "src_text" not in df.columns or "tgt_text" not in df.columns:
+        raise ValueError("Input TSV must contain 'src_text' and 'tgt_text' columns")
+    pairs = [SentencePair(zh=str(row["src_text"]), en=str(row["tgt_text"])) for _, row in df.iterrows()]
     return pairs
 
 
@@ -31,6 +31,6 @@ def read_dictionary(path: str | Path) -> List[str]:
     return terms
 
 
-def write_csv(path: str | Path, rows: Iterable[dict]) -> None:
+def write_tsv(path: str | Path, rows: Iterable[dict]) -> None:
     df = pd.DataFrame(list(rows))
-    df.to_csv(path, index=False)
+    df.to_csv(path, index=False, sep="\t")

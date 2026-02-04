@@ -9,14 +9,14 @@ This project extracts Chinese and English terms from bilingual text using **cust
 - Alignment via multilingual BERT embeddings.
 
 ## Input Format
-A CSV file with **two columns**:
-- `zh`: Chinese sentence
-- `en`: English sentence
+A TSV file with **two columns**:
+- `src_text`: Chinese sentence (Traditional Chinese accepted; will be converted to Simplified for extraction)
+- `tgt_text`: English sentence
 
-Example (`data/input.csv`):
-```csv
-zh,en
-本产品支持术语提取。,This product supports term extraction.
+Example (`data/input.tsv`):
+```tsv
+src_text	tgt_text
+本產品支援術語擷取。	This product supports term extraction.
 ```
 
 ## Dictionary Format
@@ -25,7 +25,7 @@ A newline-separated text file, one term per line.
 ## Usage
 ```bash
 python -m termalign.cli \
-  --input data/input.csv \
+  --input data/input.tsv \
   --dict-zh data/dict_zh.txt \
   --dict-en data/dict_en.txt \
   --bert-model-zh /path/to/zh-bert-ner \
@@ -35,9 +35,9 @@ python -m termalign.cli \
 ```
 
 ### Outputs
-1. `outputs/terms_zh.csv` — Chinese terms
-2. `outputs/terms_en.csv` — English terms
-3. `outputs/alignments.csv` — Term alignment
+1. `outputs/terms_zh.tsv` — Chinese terms (converted back to Traditional)
+2. `outputs/terms_en.tsv` — English terms
+3. `outputs/alignments.tsv` — Term alignment
 
 Column definitions:
 - `term`: extracted term

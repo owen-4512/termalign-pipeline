@@ -7,7 +7,7 @@ from .pipeline import run_pipeline
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Dictionary + BERT term extraction and alignment")
-    parser.add_argument("--input", required=True, help="CSV input with zh/en columns")
+    parser.add_argument("--input", required=True, help="TSV input with src_text/tgt_text columns")
     parser.add_argument("--dict-zh", required=True, help="Chinese dictionary file")
     parser.add_argument("--dict-en", required=True, help="English dictionary file")
     parser.add_argument("--bert-model-zh", help="Fine-tuned Chinese BERT NER model path")
