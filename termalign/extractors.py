@@ -20,16 +20,29 @@ class TermOccurrence:
 
 
 class DictionaryExtractor:
-    def __init__(self, terms: Sequence[str]) -> None:
+    def __init__(
+        self,
+        terms: Sequence[str],
+        *,
+        whole_word: bool = False,
+        case_sensitive: bool = True,
+    ) -> None:
         self.terms = [term for term in terms if term]
+        self.whole_word = whole_word
+        self.case_sensitive = case_sensitive
 
     def extract(self, sentence: str, source_label: str = "dict") -> List[TermOccurrence]:
         occurrences: List[TermOccurrence] = []
+        flags = 0 if self.case_sensitive else re.IGNORECASE
         for term in self.terms:
-            for match in re.finditer(re.escape(term), sentence):
+            if self.whole_word and re.search(r"\w", term):
+                pattern = re.compile(rf"\b{re.escape(term)}\b", flags=flags)
+            else:
+                pattern = re.compile(re.escape(term), flags=flags)
+            for match in pattern.finditer(sentence):
                 occurrences.append(
                     TermOccurrence(
-                        term=term,
+                        term=sentence[match.start() : match.end()],
                         source=source_label,
                         confidence=None,
                         sentence=sentence,

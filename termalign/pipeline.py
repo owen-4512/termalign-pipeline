@@ -18,12 +18,17 @@ def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, 
 
 def extract_terms(
     pairs: Sequence[SentencePair],
-    dict_terms: Sequence[str],
+    dict_terms: Sequence[str] | None,
     bert_model: str | None,
     language_label: str,
     skip_bert: bool,
 ) -> List[TermOccurrence]:
-    dict_extractor = DictionaryExtractor(dict_terms)
+    dict_extractor = None
+    if dict_terms:
+        if language_label == "en":
+            dict_extractor = DictionaryExtractor(dict_terms, whole_word=True, case_sensitive=False)
+        else:
+            dict_extractor = DictionaryExtractor(dict_terms)
     bert_extractor = None
     if bert_model and not skip_bert:
         bert_extractor = BertTermExtractor(bert_model)
@@ -31,8 +36,10 @@ def extract_terms(
     all_occurrences: List[TermOccurrence] = []
     for pair in tqdm(pairs, desc=f"extract-{language_label}"):
         sentence = pair.zh if language_label == "zh" else pair.en
-        dict_occurrences = dict_extractor.extract(sentence)
-        all_occurrences.extend(dict_occurrences)
+        dict_occurrences: List[TermOccurrence] = []
+        if dict_extractor:
+            dict_occurrences = dict_extractor.extract(sentence)
+            all_occurrences.extend(dict_occurrences)
 
         dict_spans = _dedupe_dict_spans(dict_occurrences)
         if bert_extractor:
@@ -55,8 +62,8 @@ def build_alignment(
 
 def run_pipeline(
     input_path: str | Path,
-    dict_zh_path: str | Path,
-    dict_en_path: str | Path,
+    dict_zh_path: str | Path | None,
+    dict_en_path: str | Path | None,
     bert_model_zh: str | None,
     bert_model_en: str | None,
     embed_model: str,
@@ -70,8 +77,10 @@ def run_pipeline(
     converter_s2t = OpenCC("s2t")
 
     pairs = read_sentence_pairs(input_path)
-    dict_zh = [converter_t2s.convert(term) for term in read_dictionary(dict_zh_path)]
-    dict_en = read_dictionary(dict_en_path)
+    dict_zh = None
+    if dict_zh_path:
+        dict_zh = [converter_t2s.convert(term) for term in read_dictionary(dict_zh_path)]
+    dict_en = read_dictionary(dict_en_path) if dict_en_path else None
 
     normalized_pairs = [
         SentencePair(zh=converter_t2s.convert(pair.zh), en=pair.en) for pair in pairs

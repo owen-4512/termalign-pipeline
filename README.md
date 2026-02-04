@@ -54,6 +54,8 @@ Alignment columns:
 - If you want to skip BERT extraction, pass `--skip-bert`.
 - BERT extraction requires a fast tokenizer (most Hugging Face tokenizers are fast by default).
 - The extractor always uses the tokenizer that is bundled with the fine-tuned model path you provide.
+- Dictionary paths are optional; omit them to disable dictionary matching.
+- English dictionary matching is case-insensitive and uses whole-word boundaries to avoid false positives from lowercase abbreviations.
 
 ## Installation
 ```bash
