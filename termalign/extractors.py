@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Sequence
+from typing import List, Sequence, Tuple
 
 import re
 
@@ -125,6 +125,7 @@ class BertTermExtractor:
             end_index = 0
         else:
             term_text = sentence[start_index:end_index]
+            term_text, start_index, end_index = self._clean_span(sentence, term_text, start_index, end_index)
         confidence = float(sum(scores) / max(len(scores), 1))
         return TermOccurrence(
             term=term_text,
@@ -134,3 +135,34 @@ class BertTermExtractor:
             start=start_index,
             end=end_index,
         )
+
+    @staticmethod
+    def _clean_span(sentence: str, term_text: str, start_index: int, end_index: int) -> Tuple[str, int, int]:
+        if not term_text:
+            return term_text, start_index, end_index
+
+        if " " not in sentence:
+            return term_text, start_index, end_index
+
+        leading = 0
+        trailing = 0
+        for char in term_text:
+            if char.isalnum():
+                break
+            leading += 1
+        for char in reversed(term_text):
+            if char.isalnum():
+                break
+            trailing += 1
+
+        if leading:
+            term_text = term_text[leading:]
+            start_index += leading
+        if trailing:
+            term_text = term_text[:-trailing]
+            end_index -= trailing
+
+        if not any(char.isalnum() for char in term_text):
+            return "", start_index, start_index
+
+        return term_text, start_index, end_index
