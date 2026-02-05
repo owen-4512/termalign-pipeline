@@ -17,7 +17,7 @@ def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, 
 
 
 def _normalize_en_sentence(sentence: str) -> str:
-    return " ".join(sentence.replace("\r", " ").replace("\n", " ").split())
+    return " ".join(sentence.split())
 
 
 def _keep_longest_non_overlapping(terms: List[TermOccurrence]) -> List[TermOccurrence]:
@@ -46,6 +46,11 @@ def _keep_longest_non_overlapping(terms: List[TermOccurrence]) -> List[TermOccur
 
 def _filter_en_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
     filtered = [term for term in terms if len(term.term.strip()) > 2]
+    return _keep_longest_non_overlapping(filtered)
+
+
+def _filter_zh_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
+    filtered = [term for term in terms if len(term.term.strip()) > 1]
     return _keep_longest_non_overlapping(filtered)
 
 
@@ -99,6 +104,23 @@ def _group_terms_by_sentence(terms: List[TermOccurrence]) -> dict[str, List[Term
     return grouped
 
 
+def _alignment_rows(alignments: List[AlignmentResult], converter_s2t: OpenCC) -> List[dict]:
+    return [
+        {
+            "zh_term": converter_s2t.convert(alignment.zh_term.term),
+            "en_term": alignment.en_term.term,
+            "similarity": alignment.similarity,
+            "zh_source": alignment.zh_term.source,
+            "en_source": alignment.en_term.source,
+            "zh_confidence": alignment.zh_term.confidence,
+            "en_confidence": alignment.en_term.confidence,
+            "zh_sentence": converter_s2t.convert(alignment.zh_term.sentence),
+            "en_sentence": alignment.en_term.sentence,
+        }
+        for alignment in alignments
+    ]
+
+
 def run_pipeline(
     input_path: str | Path,
     dict_zh_path: str | Path | None,
@@ -128,7 +150,7 @@ def run_pipeline(
 
     zh_terms = extract_terms(normalized_pairs, dict_zh, bert_model_zh, "zh", skip_bert)
     en_terms = extract_terms(en_pairs, dict_en, bert_model_en, "en", skip_bert)
-    zh_terms = _keep_longest_non_overlapping(zh_terms)
+    zh_terms = _filter_zh_terms(zh_terms)
     en_terms = _filter_en_terms(en_terms)
 
     zh_terms_by_sentence = _group_terms_by_sentence(zh_terms)
@@ -169,20 +191,9 @@ def run_pipeline(
         if not zh_group or not en_group:
             continue
         alignments.extend(build_alignment(zh_group, en_group, embedder))
-    write_tsv(
-        output_path / "alignments.tsv",
-        [
-            {
-                "zh_term": converter_s2t.convert(alignment.zh_term.term),
-                "en_term": alignment.en_term.term,
-                "similarity": alignment.similarity,
-                "zh_source": alignment.zh_term.source,
-                "en_source": alignment.en_term.source,
-                "zh_confidence": alignment.zh_term.confidence,
-                "en_confidence": alignment.en_term.confidence,
-                "zh_sentence": converter_s2t.convert(alignment.zh_term.sentence),
-                "en_sentence": alignment.en_term.sentence,
-            }
-            for alignment in alignments
-        ],
-    )
+
+    rows = _alignment_rows(alignments, converter_s2t)
+    write_tsv(output_path / "alignments.tsv", rows)
+
+    filtered_rows = [row for row in rows if float(row["similarity"]) > 0.5]
+    write_tsv(output_path / "alignments_high_conf.tsv", filtered_rows)

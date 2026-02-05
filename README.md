@@ -57,9 +57,10 @@ Alignment columns:
 - Dictionary paths are optional; omit them to disable dictionary matching.
 - English dictionary matching is case-insensitive and uses whole-word boundaries to avoid false positives from lowercase abbreviations.
 - English term output ignores newlines, drops terms with length ≤ 2, and keeps only the longest overlapping term per sentence.
-- Chinese term output keeps only the longest overlapping term per sentence.
+- Chinese term output keeps only the longest overlapping term per sentence and drops single-character terms.
 - Alignment only pairs terms within the same input sentence pair (no cross-sentence alignment).
 - The embedding model is loaded once and reused across sentence-pair alignments to avoid repeated reload warnings.
+- `alignments_high_conf.tsv` includes only alignments with similarity > 0.5 (same columns as `alignments.tsv`).
 
 ## Installation
 ```bash
