@@ -87,9 +87,8 @@ def extract_terms(
 def build_alignment(
     zh_terms: List[TermOccurrence],
     en_terms: List[TermOccurrence],
-    embed_model: str,
+    embedder: Embedder,
 ) -> List[AlignmentResult]:
-    embedder = Embedder(embed_model)
     return align_terms(zh_terms, en_terms, embedder)
 
 
@@ -160,6 +159,7 @@ def run_pipeline(
         ],
     )
 
+    embedder = Embedder(embed_model)
     alignments: List[AlignmentResult] = []
     for pair in zip(normalized_pairs, en_pairs):
         zh_sentence = pair[0].zh
@@ -168,7 +168,7 @@ def run_pipeline(
         en_group = en_terms_by_sentence.get(en_sentence, [])
         if not zh_group or not en_group:
             continue
-        alignments.extend(build_alignment(zh_group, en_group, embed_model))
+        alignments.extend(build_alignment(zh_group, en_group, embedder))
     write_tsv(
         output_path / "alignments.tsv",
         [

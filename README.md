@@ -59,6 +59,7 @@ Alignment columns:
 - English term output ignores newlines, drops terms with length ≤ 2, and keeps only the longest overlapping term per sentence.
 - Chinese term output keeps only the longest overlapping term per sentence.
 - Alignment only pairs terms within the same input sentence pair (no cross-sentence alignment).
+- The embedding model is loaded once and reused across sentence-pair alignments to avoid repeated reload warnings.
 
 ## Installation
 ```bash
