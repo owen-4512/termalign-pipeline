@@ -9,7 +9,7 @@ This project extracts Chinese and English terms from bilingual text using **cust
 - Alignment via multilingual BERT embeddings (default: `./multi-embedding`).
 
 ## Input Format
-A TSV file with **two columns**:
+A TSV file (or a folder of TSV files) with **two columns**:
 - `src_text`: Chinese sentence (Traditional Chinese accepted; will be converted to Simplified for extraction)
 - `tgt_text`: English sentence
 
@@ -33,6 +33,17 @@ python -m termalign.cli \
   --output-dir outputs
 ```
 
+Batch mode example:
+```bash
+python -m termalign.cli \
+  --input data/batch_inputs \
+  --dict-zh data/dict_zh.txt \
+  --dict-en data/dict_en.txt \
+  --bert-model-zh /path/to/zh-bert-ner \
+  --bert-model-en /path/to/en-bert-ner \
+  --output-dir outputs
+```
+
 ### Outputs
 1. `outputs/terms_zh.tsv` — Chinese terms (converted back to Traditional)
 2. `outputs/terms_en.tsv` — English terms
@@ -47,6 +58,11 @@ Column definitions:
 Alignment columns:
 - `zh_term`, `en_term`, `similarity`
 - plus per-term metadata (source, confidence, sentence)
+- every output file includes `source_file` column
+
+Batch outputs (`--input` is a folder):
+- per input file: `<name>_terms_zh.tsv`, `<name>_terms_en.tsv`, `<name>_alignments.tsv`, `<name>_alignments_high_conf.tsv`
+- merged all-file outputs: `all_terms_zh.tsv`, `all_terms_en.tsv`, `all_alignments.tsv`, `all_alignments_high_conf.tsv`
 
 ## Notes
 - If you only have one BERT model, you can pass the same path for both `--bert-model-zh` and `--bert-model-en`.
