@@ -10,6 +10,8 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Dict, Iterable, List, Tuple
 
+NAN_TOKEN = "NAN"
+
 
 def _iter_jsonl(path: Path) -> Iterable[dict]:
     with path.open("r", encoding="utf-8") as f:
@@ -103,7 +105,7 @@ def _load_pred_tsv(pred_tsv: Path) -> List[Tuple[str, str]]:
 
 
 def _load_gold_from_proper_jsonl(proper_jsonl: Path) -> Tuple[set[str], set[str], Dict[str, set[str]]]:
-    """Load gold sets from extracted proper JSONL lines: {"zh":..., "en":[...]}."""
+    """Load gold sets from extracted proper JSONL lines: {"zh":..., "en":[...]}"""
     zh_set: set[str] = set()
     en_set: set[str] = set()
     zh_to_en: Dict[str, set[str]] = defaultdict(set)
@@ -130,7 +132,58 @@ def _prf(correct: int, pred_total: int, gold_total: int) -> Tuple[float, float, 
     return precision, recall, f1
 
 
-def evaluate(pred_tsv: Path, gold_jsonl: Path | None = None, gold_proper_jsonl: Path | None = None, proper_field: str = "proper") -> dict:
+def _write_analysis_tsv(
+    analysis_tsv: Path,
+    predictions: List[Tuple[str, str]],
+    zh_gold: set[str],
+    en_gold: set[str],
+    align_gold: Dict[str, set[str]],
+) -> None:
+    """Write per-row analysis TSV with requested 8 columns."""
+    with analysis_tsv.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f, delimiter="\t")
+        writer.writerow([
+            "pred_zh",
+            "matched_zh_key",
+            "zh_score",
+            "pred_en",
+            "matched_en_value",
+            "en_score",
+            "correct_alignment_en",
+            "alignment_score",
+        ])
+
+        for pred_zh, pred_en in predictions:
+            zh_hit = int(pred_zh in zh_gold)
+            en_hit = int(pred_en in en_gold)
+            align_hit = int(pred_zh in align_gold and pred_en in align_gold[pred_zh])
+
+            matched_zh_key = pred_zh if zh_hit else NAN_TOKEN
+            matched_en_value = pred_en if en_hit else NAN_TOKEN
+            if align_hit:
+                correct_alignment_en = "|".join(sorted(align_gold[pred_zh]))
+            else:
+                correct_alignment_en = NAN_TOKEN
+
+            writer.writerow([
+                pred_zh,
+                matched_zh_key,
+                zh_hit,
+                pred_en,
+                matched_en_value,
+                en_hit,
+                correct_alignment_en,
+                align_hit,
+            ])
+
+
+def evaluate(
+    pred_tsv: Path,
+    gold_jsonl: Path | None = None,
+    gold_proper_jsonl: Path | None = None,
+    proper_field: str = "proper",
+    analysis_tsv: Path | None = None,
+) -> dict:
     if bool(gold_jsonl) == bool(gold_proper_jsonl):
         raise ValueError("Provide exactly one of `gold_jsonl` or `gold_proper_jsonl`.")
 
@@ -152,6 +205,9 @@ def evaluate(pred_tsv: Path, gold_jsonl: Path | None = None, gold_proper_jsonl: 
     zh_p, zh_r, zh_f1 = _prf(zh_correct, len(pred_zh), len(zh_gold))
     en_p, en_r, en_f1 = _prf(en_correct, len(pred_en), len(en_gold))
     al_p, al_r, al_f1 = _prf(align_correct, len(predictions), gold_align_pairs)
+
+    if analysis_tsv:
+        _write_analysis_tsv(analysis_tsv, predictions, zh_gold, en_gold, align_gold)
 
     return {
         "counts": {
@@ -184,6 +240,7 @@ def main() -> None:
     p_eval.add_argument("--gold-proper-jsonl", type=Path, help="Extracted proper JSONL containing `zh` and `en`.")
     p_eval.add_argument("--field", default="proper", help="Field name for proper mapping in --gold-jsonl. Default: proper")
     p_eval.add_argument("--output", type=Path, help="Optional output JSON metrics path.")
+    p_eval.add_argument("--analysis-tsv", type=Path, help="Optional output TSV path for per-row scoring analysis.")
 
     args = parser.parse_args()
 
@@ -198,6 +255,7 @@ def main() -> None:
             gold_jsonl=args.gold_jsonl,
             gold_proper_jsonl=args.gold_proper_jsonl,
             proper_field=args.field,
+            analysis_tsv=args.analysis_tsv,
         )
         text = json.dumps(metrics, ensure_ascii=False, indent=2)
         if args.output:

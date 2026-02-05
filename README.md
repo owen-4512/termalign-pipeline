@@ -82,6 +82,26 @@ python termalign_metrics.py evaluate \
 
 说明：`--gold-jsonl` 和 `--gold-proper-jsonl` 必须二选一。
 
+### 4.3 输出分析过程 TSV
+
+```bash
+python termalign_metrics.py evaluate \
+  --pred-tsv data/pred.tsv \
+  --gold-jsonl data/gold.jsonl \
+  --analysis-tsv data/analysis.tsv
+```
+
+`analysis.tsv` 包含 8 列（按你的要求）：
+
+1. `pred_zh`：提取出的中文术语（预测第 0 列）
+2. `matched_zh_key`：若该中文术语在 gold 键中存在，则输出该键；否则 `NAN`
+3. `zh_score`：中文术语命中得分（1/0）
+4. `pred_en`：提取出的英文术语（预测第 1 列）
+5. `matched_en_value`：若该英文术语在 gold 值集合中存在，则输出该值；否则 `NAN`
+6. `en_score`：英文术语命中得分（1/0）
+7. `correct_alignment_en`：以第一列中文术语为基础，若 alignment 正确则列出该中文术语在 gold 中的正确英文术语（多个用 `|` 连接）；不正确则 `NAN`
+8. `alignment_score`：alignment 命中得分（1/0）
+
 ---
 
 ## 5. 计算过程与公式
