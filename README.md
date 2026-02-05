@@ -61,6 +61,7 @@ Alignment columns:
 - The embedding model is loaded once and reused across sentence-pair alignments to avoid repeated reload warnings.
 - Default alignment model path is `./multi-embedding` (override with `--embed-model`).
 - `alignments_high_conf.tsv` includes only alignments with similarity > 0.5 (same columns as `alignments.tsv`).
+- If a model path is mistyped (for example `mode` vs `model_en`), the pipeline now raises a clear load error with path/repo guidance.
 
 ## Installation
 ```bash

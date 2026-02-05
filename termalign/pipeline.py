@@ -57,6 +57,16 @@ def _filter_zh_terms(terms: List[TermOccurrence]) -> List[TermOccurrence]:
     return _keep_longest_non_overlapping(filtered)
 
 
+
+
+def _format_model_load_error(model_name_or_path: str, language_label: str, error: Exception) -> RuntimeError:
+    return RuntimeError(
+        f"Failed to load {language_label} BERT model '{model_name_or_path}'. "
+        "If this should be a local folder, verify the path and required files (config.json, tokenizer files, model weights). "
+        "If this should be a Hugging Face repo id, verify the id spelling and access permission. "
+        f"Original error: {error}"
+    )
+
 def extract_terms(
     pairs: Sequence[SentencePair],
     dict_terms: Sequence[str] | None,
@@ -72,7 +82,10 @@ def extract_terms(
             dict_extractor = DictionaryExtractor(dict_terms)
     bert_extractor = None
     if bert_model and not skip_bert:
-        bert_extractor = BertTermExtractor(bert_model)
+        try:
+            bert_extractor = BertTermExtractor(bert_model)
+        except Exception as error:
+            raise _format_model_load_error(bert_model, language_label, error) from error
 
     all_occurrences: List[TermOccurrence] = []
     for pair in tqdm(pairs, desc=f"extract-{language_label}"):
