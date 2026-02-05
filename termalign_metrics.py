@@ -18,16 +18,35 @@ def _iter_jsonl(path: Path) -> Iterable[dict]:
             if not raw:
                 continue
             try:
-                yield json.loads(raw)
+                record = json.loads(raw)
             except json.JSONDecodeError as exc:
                 raise ValueError(f"Invalid JSON at {path}:{line_no}: {exc}") from exc
+            if not isinstance(record, dict):
+                raise ValueError(f"JSONL line must be an object at {path}:{line_no}, got {type(record)!r}")
+            yield record
+
+
+def _normalize_en_values(raw_en: object) -> List[str]:
+    """Normalize `proper` value to a list of English terms.
+
+    Supported formats for a single Chinese term:
+    - "term" (string)
+    - ["term1", "term2"] (list/tuple/set)
+    """
+    if raw_en is None:
+        return []
+    if isinstance(raw_en, str):
+        return [raw_en]
+    if isinstance(raw_en, (list, tuple, set)):
+        return [str(x) for x in raw_en if str(x).strip()]
+    raise ValueError(f"Unsupported `proper` value type: {type(raw_en)!r}; expected str or list/tuple/set")
 
 
 def extract_proper(input_jsonl: Path, output_jsonl: Path, proper_field: str = "proper") -> int:
     """Extract all key-value pairs in `proper` fields into a standalone JSONL.
 
-    Each output line is shaped as:
-      {"zh": <中文术语>, "en": <英文术语>}
+    Output line format:
+      {"zh": <中文术语>, "en": [<英文术语1>, ...]}
     """
 
     extracted = 0
@@ -40,30 +59,32 @@ def extract_proper(input_jsonl: Path, output_jsonl: Path, proper_field: str = "p
                 raise ValueError(f"Field `{proper_field}` must be a dict, got: {type(proper)!r}")
 
             for zh, en in proper.items():
-                line = {"zh": str(zh), "en": str(en)}
+                en_terms = _normalize_en_values(en)
+                line = {"zh": str(zh), "en": en_terms}
                 out_f.write(json.dumps(line, ensure_ascii=False) + "\n")
                 extracted += 1
 
     return extracted
 
 
-def _load_gold_from_jsonl(gold_jsonl: Path) -> Tuple[set[str], set[str], Dict[str, set[str]]]:
+def _load_gold_from_jsonl(gold_jsonl: Path, proper_field: str = "proper") -> Tuple[set[str], set[str], Dict[str, set[str]]]:
     zh_set: set[str] = set()
     en_set: set[str] = set()
     zh_to_en: Dict[str, set[str]] = defaultdict(set)
 
     for record in _iter_jsonl(gold_jsonl):
-        proper = record.get("proper", {})
+        proper = record.get(proper_field, {})
         if proper is None:
             continue
         if not isinstance(proper, dict):
-            raise ValueError(f"Field `proper` must be dict in {gold_jsonl}, got {type(proper)!r}")
+            raise ValueError(f"Field `{proper_field}` must be dict in {gold_jsonl}, got {type(proper)!r}")
         for zh, en in proper.items():
             zh_s = str(zh)
-            en_s = str(en)
+            en_values = _normalize_en_values(en)
             zh_set.add(zh_s)
-            en_set.add(en_s)
-            zh_to_en[zh_s].add(en_s)
+            for en_s in en_values:
+                en_set.add(en_s)
+                zh_to_en[zh_s].add(en_s)
 
     return zh_set, en_set, zh_to_en
 
@@ -81,6 +102,27 @@ def _load_pred_tsv(pred_tsv: Path) -> List[Tuple[str, str]]:
     return rows
 
 
+def _load_gold_from_proper_jsonl(proper_jsonl: Path) -> Tuple[set[str], set[str], Dict[str, set[str]]]:
+    """Load gold sets from extracted proper JSONL lines: {"zh":..., "en":[...]}."""
+    zh_set: set[str] = set()
+    en_set: set[str] = set()
+    zh_to_en: Dict[str, set[str]] = defaultdict(set)
+
+    for record in _iter_jsonl(proper_jsonl):
+        if "zh" not in record or "en" not in record:
+            raise ValueError(f"Each line in {proper_jsonl} must include `zh` and `en` fields")
+        zh = str(record["zh"]).strip()
+        en_values = _normalize_en_values(record["en"])
+        if not zh:
+            continue
+        zh_set.add(zh)
+        for en in en_values:
+            en_set.add(en)
+            zh_to_en[zh].add(en)
+
+    return zh_set, en_set, zh_to_en
+
+
 def _prf(correct: int, pred_total: int, gold_total: int) -> Tuple[float, float, float]:
     precision = correct / pred_total if pred_total else 0.0
     recall = correct / gold_total if gold_total else 0.0
@@ -88,10 +130,16 @@ def _prf(correct: int, pred_total: int, gold_total: int) -> Tuple[float, float, 
     return precision, recall, f1
 
 
-def evaluate(pred_tsv: Path, gold_jsonl: Path) -> dict:
-    zh_gold, en_gold, align_gold = _load_gold_from_jsonl(gold_jsonl)
-    predictions = _load_pred_tsv(pred_tsv)
+def evaluate(pred_tsv: Path, gold_jsonl: Path | None = None, gold_proper_jsonl: Path | None = None, proper_field: str = "proper") -> dict:
+    if bool(gold_jsonl) == bool(gold_proper_jsonl):
+        raise ValueError("Provide exactly one of `gold_jsonl` or `gold_proper_jsonl`.")
 
+    if gold_jsonl:
+        zh_gold, en_gold, align_gold = _load_gold_from_jsonl(gold_jsonl, proper_field=proper_field)
+    else:
+        zh_gold, en_gold, align_gold = _load_gold_from_proper_jsonl(gold_proper_jsonl)  # type: ignore[arg-type]
+
+    predictions = _load_pred_tsv(pred_tsv)
     pred_zh = [zh for zh, _ in predictions]
     pred_en = [en for _, en in predictions]
 
@@ -99,16 +147,18 @@ def evaluate(pred_tsv: Path, gold_jsonl: Path) -> dict:
     en_correct = sum(1 for en in pred_en if en in en_gold)
     align_correct = sum(1 for zh, en in predictions if zh in align_gold and en in align_gold[zh])
 
+    gold_align_pairs = sum(len(v) for v in align_gold.values())
+
     zh_p, zh_r, zh_f1 = _prf(zh_correct, len(pred_zh), len(zh_gold))
     en_p, en_r, en_f1 = _prf(en_correct, len(pred_en), len(en_gold))
-    al_p, al_r, al_f1 = _prf(align_correct, len(predictions), sum(len(v) for v in align_gold.values()))
+    al_p, al_r, al_f1 = _prf(align_correct, len(predictions), gold_align_pairs)
 
     return {
         "counts": {
             "pred_pairs": len(predictions),
             "gold_zh_terms": len(zh_gold),
             "gold_en_terms": len(en_gold),
-            "gold_align_pairs": sum(len(v) for v in align_gold.values()),
+            "gold_align_pairs": gold_align_pairs,
             "zh_correct": zh_correct,
             "en_correct": en_correct,
             "alignment_correct": align_correct,
@@ -128,9 +178,11 @@ def main() -> None:
     p_extract.add_argument("--output", type=Path, required=True, help="Output JSONL path.")
     p_extract.add_argument("--field", default="proper", help="Field name for proper mapping. Default: proper")
 
-    p_eval = sub.add_parser("evaluate", help="Evaluate predicted TSV against JSONL gold `proper` field.")
+    p_eval = sub.add_parser("evaluate", help="Evaluate predicted TSV against gold mappings.")
     p_eval.add_argument("--pred-tsv", type=Path, required=True, help="Predicted TSV, zh in col0 and en in col1.")
-    p_eval.add_argument("--gold-jsonl", type=Path, required=True, help="Gold JSONL with `proper` mappings.")
+    p_eval.add_argument("--gold-jsonl", type=Path, help="Gold JSONL containing `proper` mappings.")
+    p_eval.add_argument("--gold-proper-jsonl", type=Path, help="Extracted proper JSONL containing `zh` and `en`.")
+    p_eval.add_argument("--field", default="proper", help="Field name for proper mapping in --gold-jsonl. Default: proper")
     p_eval.add_argument("--output", type=Path, help="Optional output JSON metrics path.")
 
     args = parser.parse_args()
@@ -141,7 +193,12 @@ def main() -> None:
         return
 
     if args.cmd == "evaluate":
-        metrics = evaluate(args.pred_tsv, args.gold_jsonl)
+        metrics = evaluate(
+            args.pred_tsv,
+            gold_jsonl=args.gold_jsonl,
+            gold_proper_jsonl=args.gold_proper_jsonl,
+            proper_field=args.field,
+        )
         text = json.dumps(metrics, ensure_ascii=False, indent=2)
         if args.output:
             args.output.write_text(text + "\n", encoding="utf-8")
