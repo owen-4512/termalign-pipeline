@@ -6,7 +6,7 @@ This project extracts Chinese and English terms from bilingual text using **cust
 - Dictionary-first extraction (label: `dict`).
 - BERT token-classification extraction (label: `bert`) with confidence scores.
 - No deduplication: every occurrence is kept.
-- Alignment via multilingual BERT embeddings.
+- Alignment via multilingual BERT embeddings (default: `./multi-embedding`).
 
 ## Input Format
 A TSV file with **two columns**:
@@ -30,7 +30,6 @@ python -m termalign.cli \
   --dict-en data/dict_en.txt \
   --bert-model-zh /path/to/zh-bert-ner \
   --bert-model-en /path/to/en-bert-ner \
-  --embed-model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
   --output-dir outputs
 ```
 
@@ -60,6 +59,7 @@ Alignment columns:
 - Chinese term output keeps only the longest overlapping term per sentence and drops single-character terms.
 - Alignment only pairs terms within the same input sentence pair (no cross-sentence alignment).
 - The embedding model is loaded once and reused across sentence-pair alignments to avoid repeated reload warnings.
+- Default alignment model path is `./multi-embedding` (override with `--embed-model`).
 - `alignments_high_conf.tsv` includes only alignments with similarity > 0.5 (same columns as `alignments.tsv`).
 
 ## Installation

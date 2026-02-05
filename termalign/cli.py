@@ -14,8 +14,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bert-model-en", help="Fine-tuned English BERT NER model path")
     parser.add_argument(
         "--embed-model",
-        required=True,
-        help="Open-source BERT embedding model for alignment",
+        default="multi-embedding",
+        help="Embedding model for alignment (default: ./multi-embedding)",
     )
     parser.add_argument("--output-dir", required=True, help="Directory for outputs")
     parser.add_argument("--skip-bert", action="store_true", help="Skip BERT extraction")
