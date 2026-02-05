@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List, Sequence
 
+import re
+
 from tqdm import tqdm
 
 from opencc import OpenCC
@@ -17,6 +19,7 @@ def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, 
 
 
 def _normalize_en_sentence(sentence: str) -> str:
+    sentence = re.sub(r"(?:\\n|\n|\r)", " ", sentence)
     return " ".join(sentence.split())
 
 
