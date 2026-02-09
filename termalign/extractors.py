@@ -177,12 +177,13 @@ class BertTermExtractor:
 
         leading = 0
         trailing = 0
-        for char in term_text:
-            if char.isalnum():
+        for idx, char in enumerate(term_text):
+            if char.isalnum() or (char == "-" and idx + 1 < len(term_text) and term_text[idx + 1].isalnum()):
                 break
             leading += 1
-        for char in reversed(term_text):
-            if char.isalnum():
+        for idx, char in enumerate(reversed(term_text)):
+            actual_idx = len(term_text) - 1 - idx
+            if char.isalnum() or (char == "-" and actual_idx > 0 and term_text[actual_idx - 1].isalnum()):
                 break
             trailing += 1
 
