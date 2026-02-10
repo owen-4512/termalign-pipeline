@@ -76,7 +76,7 @@ def extract_terms(
     dict_extractor = None
     if dict_terms:
         if language_label == "en":
-            dict_extractor = DictionaryExtractor(dict_terms, whole_word=True, case_sensitive=False)
+            dict_extractor = DictionaryExtractor(dict_terms, whole_word=True, case_sensitive=True)
         else:
             dict_extractor = DictionaryExtractor(dict_terms)
     bert_extractor = None

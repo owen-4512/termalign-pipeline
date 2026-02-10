@@ -70,7 +70,7 @@ Batch outputs (`--input` is a folder):
 - BERT extraction requires a fast tokenizer (most Hugging Face tokenizers are fast by default).
 - The extractor always uses the tokenizer that is bundled with the fine-tuned model path you provide.
 - Dictionary paths are optional; omit them to disable dictionary matching.
-- English dictionary matching is case-insensitive and uses whole-word boundaries to avoid false positives from lowercase abbreviations.
+- English dictionary matching is case-sensitive and uses whole-word boundaries to avoid partial matches (e.g., dictionary `credit` won't match inside a longer term like `credit loss` when a full-term entry exists).
 - English term output ignores newlines, drops terms with length ≤ 2, and keeps only the longest overlapping term per sentence.
 - Chinese term output keeps only the longest overlapping term per sentence and drops single-character terms.
 - Alignment only pairs terms within the same input sentence pair (no cross-sentence alignment).
