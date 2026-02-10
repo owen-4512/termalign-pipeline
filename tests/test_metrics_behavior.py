@@ -25,6 +25,37 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertAlmostEqual(recall, 2 / 3)
         self.assertAlmostEqual(f1, 2 / 3)
 
+
+    def test_accuracy_predicted_contains_gold_scores_full(self):
+        gold_map = build_gold_map([{"术语A": ["hong kong applied science and technology research institute"]}])
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "术语A": ["Hong Kong Applied Science and Technology Research Institute (ASTRI)"],
+                },
+            }
+        ]
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        self.assertAlmostEqual(precision, 1.0)
+        self.assertAlmostEqual(recall, 1.0)
+        self.assertAlmostEqual(f1, 1.0)
+
+    def test_accuracy_gold_contains_predicted_scores_token_ratio(self):
+        gold_map = build_gold_map([{"术语A": ["cybersecurity risk assessment"]}])
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "术语A": ["risk assessment"],
+                },
+            }
+        ]
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        self.assertAlmostEqual(precision, 2 / 3)
+        self.assertAlmostEqual(recall, 2 / 3)
+        self.assertAlmostEqual(f1, 2 / 3)
+
     def test_accuracy_skips_terms_not_in_gold(self):
         gold_records = [{"术语A": ["Term X"]}]
         gold_map = build_gold_map(gold_records)

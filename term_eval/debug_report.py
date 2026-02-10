@@ -7,6 +7,7 @@ from collections import Counter
 from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 from .data_model import DistanceInputs
+from .metrics_accuracy import compute_occurrence_best_score
 from .metrics_distance import shortest_distance, token_positions_by_variant
 from .normalization import normalize
 
@@ -14,7 +15,7 @@ from .normalization import normalize
 def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping[str, set[str]]) -> Dict[str, Any]:
     details: List[Dict[str, Any]] = []
     skipped_terms: List[Dict[str, Any]] = []
-    correct = 0
+    score_sum = 0.0
     total_translation_occurrences = 0
     total_original_term_occurrences = 0
 
@@ -44,11 +45,11 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 norm_var = normalize(str(variant))
                 if not norm_var:
                     continue
-                matched = norm_var in set(gold_refs)
+
+                best_score = compute_occurrence_best_score(norm_var, set(gold_refs))
                 total_translation_occurrences += 1
                 total_original_term_occurrences += 1
-                if matched:
-                    correct += 1
+                score_sum += best_score
                 details.append(
                     {
                         "source_file": source_file,
@@ -57,13 +58,12 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                         "predicted_variant": str(variant),
                         "predicted_variant_normalized": norm_var,
                         "gold_variants_normalized": gold_refs,
-                        "matched": matched,
-                        "score": 1 if matched else 0,
+                        "score": best_score,
                     }
                 )
 
-    precision = (correct / total_translation_occurrences) if total_translation_occurrences else 0.0
-    recall = (correct / total_original_term_occurrences) if total_original_term_occurrences else 0.0
+    precision = (score_sum / total_translation_occurrences) if total_translation_occurrences else 0.0
+    recall = (score_sum / total_original_term_occurrences) if total_original_term_occurrences else 0.0
     if precision == 0.0 and recall == 0.0:
         f1 = 0.0
     else:
@@ -71,7 +71,7 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
 
     return {
         "summary": {
-            "correct_occurrences": correct,
+            "score_sum": score_sum,
             "total_translation_occurrences": total_translation_occurrences,
             "total_original_term_occurrences": total_original_term_occurrences,
             "skipped_terms_not_in_gold": len(skipped_terms),

@@ -21,7 +21,7 @@ term_eval/
 
 ## 支持指标
 
-- `accuracy`：计算 `f1 / precision / recall`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后一个中文术语可对应多个可接受英文译法，命中任一即算准确）
+- `accuracy`：计算 `f1 / precision / recall`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
 - `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
 - `distance`：计算 shortest distance penalty
 
@@ -126,7 +126,7 @@ python term_eval_pipeline.py \
 ```
 
 `debug_metrics.json` 中会记录：
-- accuracy：每个术语 occurrence 命中的 gold 译法、是否匹配、单项得分
+- accuracy：每个术语 occurrence 的 gold 候选、单项得分（可为 0~1 的小数）
 - consistency：每个中文术语的译法计数、概率分布、entropy
 - distance：出现多个译法的术语、各译法位置、最短距离与 penalty
 - 额外元信息：record 数、source term 数、所选 metrics 等
