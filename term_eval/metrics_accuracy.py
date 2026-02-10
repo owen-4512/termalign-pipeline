@@ -21,18 +21,44 @@ def _token_count(text: str) -> int:
     return len([t for t in text.split(" ") if t])
 
 
+def _tokens(text: str) -> list[str]:
+    return [t for t in text.split(" ") if t]
+
+
+def _is_ordered_subsequence(needle_tokens: Sequence[str], haystack_tokens: Sequence[str]) -> bool:
+    """Return True if needle tokens appear in haystack in order (not necessarily contiguous)."""
+    if not needle_tokens:
+        return False
+    i = 0
+    for token in haystack_tokens:
+        if token == needle_tokens[i]:
+            i += 1
+            if i == len(needle_tokens):
+                return True
+    return False
+
+
 def _occurrence_score(predicted_norm: str, gold_norm: str) -> float:
     if not predicted_norm or not gold_norm:
         return 0.0
     if predicted_norm == gold_norm:
         return 1.0
-    if gold_norm in predicted_norm:
+
+    predicted_tokens = _tokens(predicted_norm)
+    gold_tokens = _tokens(gold_norm)
+    if not predicted_tokens or not gold_tokens:
+        return 0.0
+
+    # Rule 1: predicted covers gold (ordered token subsequence) => full score.
+    if _is_ordered_subsequence(gold_tokens, predicted_tokens):
         return 1.0
-    if predicted_norm in gold_norm:
-        g_tokens = _token_count(gold_norm)
+
+    # Rule 2: predicted is part of gold (ordered token subsequence) => token ratio.
+    if _is_ordered_subsequence(predicted_tokens, gold_tokens):
+        g_tokens = len(gold_tokens)
         if g_tokens == 0:
             return 0.0
-        p_tokens = _token_count(predicted_norm)
+        p_tokens = len(predicted_tokens)
         return p_tokens / g_tokens
     return 0.0
 
