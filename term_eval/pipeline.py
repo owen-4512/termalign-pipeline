@@ -156,7 +156,14 @@ def run_evaluation(
         )
 
     if include_debug:
+        batch_scores = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), Mapping) else {}
+        score_summary: Dict[str, Any] = {}
+        for key in ("f1", "precision", "recall", "consistency", "distance_penalty", "final_score"):
+            if key in batch_scores:
+                score_summary[key] = batch_scores[key]
+
         debug_info: Dict[str, Any] = {
+            "score_summary": score_summary,
             "meta": {
                 "mode": mode,
                 "report_level": report_level,

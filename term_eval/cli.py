@@ -5,8 +5,19 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any, Dict
 
 from .pipeline import run_evaluation
+
+
+def _extract_metric_summary(result: Dict[str, Any]) -> Dict[str, Any]:
+    summary: Dict[str, Any] = {}
+    batch_score = result.get("batch_score")
+    if isinstance(batch_score, dict):
+        for key in ("f1", "precision", "recall", "consistency", "distance_penalty", "final_score"):
+            if key in batch_score:
+                summary[key] = batch_score[key]
+    return summary
 
 
 def parse_args() -> argparse.Namespace:
@@ -50,10 +61,11 @@ def main() -> None:
         include_debug=bool(args.debug_log),
     )
 
-    payload = json.dumps(result, ensure_ascii=False, indent=2)
+    metric_summary = _extract_metric_summary(result)
+    payload = json.dumps(metric_summary, ensure_ascii=False, indent=2)
     print(payload)
     if args.output_json:
-        args.output_json.write_text(payload, encoding="utf-8")
+        args.output_json.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     if args.debug_log:
         debug_payload = json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2)
         args.debug_log.write_text(debug_payload, encoding="utf-8")

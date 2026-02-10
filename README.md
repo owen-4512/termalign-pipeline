@@ -139,7 +139,16 @@ python term_eval_pipeline.py \
 
 ## 输出
 
-输出 JSON 会包含：
+CLI 标准输出会打印一个精简 JSON，仅包含：
+
+- `f1`, `precision`, `recall`
+- `consistency`
+- `distance_penalty`
+- `final_score`
+
+如果你传入 `--output-json`，文件中会保存完整结果 JSON（含元信息、document/batch 结构等）。
+
+完整结果 JSON 会包含：
 
 - 元信息：`mode`, `report_level`, `metrics`, `alpha`, `beta`, `num_records`
 - 当 `report_level=batch|both`：`batch_score`
