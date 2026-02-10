@@ -52,7 +52,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-> 当前实现仅使用 Python 标准库。
+需要安装 spaCy 用于标准化（tokenization + lemmatization）。
+
+可选安装英文模型（推荐）：
+
+```bash
+python -m spacy download en_core_web_sm
+```
 
 ## CLI 用法
 
@@ -144,4 +150,3 @@ python term_eval_pipeline.py \
 - `consistency`
 - `distance_penalty`
 - `final_score`（仅当 `--metrics all`）
-

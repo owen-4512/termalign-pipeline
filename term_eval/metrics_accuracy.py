@@ -18,21 +18,7 @@ from .normalization import normalize
 
 
 def _tokens(text: str) -> list[str]:
-    return [_canonical_token(t) for t in text.split(" ") if t]
-
-
-def _canonical_token(token: str) -> str:
-    """Lightweight canonicalization for tolerant token matching.
-
-    This keeps matching deterministic while handling common English inflection
-    differences that appear in term variants (e.g. ratio/ratios,
-    enterprise/enterprises).
-    """
-    if len(token) > 4 and token.endswith("ies"):
-        return token[:-3] + "y"
-    if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
-        return token[:-1]
-    return token
+    return [t for t in text.split(" ") if t]
 
 
 def _is_ordered_subsequence(needle_tokens: Sequence[str], haystack_tokens: Sequence[str]) -> bool:
