@@ -14,6 +14,7 @@ from .data_model import (
     collapse_records_for_simple_mode,
 )
 from .io_utils import read_jsonl, read_tsv
+from .debug_report import build_accuracy_debug, build_consistency_debug, build_distance_debug
 from .metrics_accuracy import compute_accuracy
 from .metrics_consistency import compute_consistency
 from .metrics_distance import compute_shortest_distance_penalty
@@ -93,6 +94,7 @@ def run_evaluation(
     target_txt: Path | None = None,
     target_dir: Path | None = None,
     report_level: str = "batch",
+    include_debug: bool = False,
 ) -> Dict[str, Any]:
     selected_metrics = parse_metrics(metrics)
     report_level = report_level.lower()
@@ -152,5 +154,23 @@ def run_evaluation(
             alpha=alpha,
             beta=beta,
         )
+
+    if include_debug:
+        debug_info: Dict[str, Any] = {
+            "meta": {
+                "mode": mode,
+                "report_level": report_level,
+                "selected_metrics": selected_metrics,
+                "num_records": len(records),
+                "num_source_terms": sum(len(rec.get("extracted_terms", {})) for rec in records if isinstance(rec.get("extracted_terms", {}), Mapping)),
+            }
+        }
+        if "accuracy" in selected_metrics:
+            debug_info["accuracy"] = build_accuracy_debug(records, gold_map)
+        if "consistency" in selected_metrics:
+            debug_info["consistency"] = build_consistency_debug(records)
+        if "distance" in selected_metrics:
+            debug_info["distance"] = build_distance_debug(records, token_map)
+        result["debug"] = debug_info
 
     return result

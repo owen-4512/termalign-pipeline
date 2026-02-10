@@ -109,6 +109,28 @@ python term_eval_pipeline.py \
 - `batch`：仅输出全量聚合分数（默认）
 - `both`：同时输出 document 与 batch
 
+
+### 5) 输出详细 debug 日志
+
+```bash
+python term_eval_pipeline.py \
+  --term-align-tsv data/align.tsv \
+  --gold-jsonl data/gold.jsonl \
+  --mode batch \
+  --target-dir data/targets \
+  --report-level both \
+  --metrics all \
+  --alpha 0.2 \
+  --beta 0.1 \
+  --debug-log debug_metrics.json
+```
+
+`debug_metrics.json` 中会记录：
+- accuracy：每个术语 occurrence 命中的 gold 译法、是否匹配、单项得分
+- consistency：每个中文术语的译法计数、概率分布、entropy
+- distance：出现多个译法的术语、各译法位置、最短距离与 penalty
+- 额外元信息：record 数、source term 数、所选 metrics 等
+
 ## 输出
 
 输出 JSON 会包含：

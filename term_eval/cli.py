@@ -31,6 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--alpha", type=float, default=0.0, help="Hyperparameter for consistency in final score")
     parser.add_argument("--beta", type=float, default=0.0, help="Hyperparameter for distance penalty in final score")
     parser.add_argument("--output-json", type=Path, help="Optional output JSON file")
+    parser.add_argument("--debug-log", type=Path, help="Optional debug log JSON file with detailed metric traces")
     return parser.parse_args()
 
 
@@ -46,12 +47,16 @@ def main() -> None:
         target_txt=args.target_txt,
         target_dir=args.target_dir,
         report_level=args.report_level,
+        include_debug=bool(args.debug_log),
     )
 
     payload = json.dumps(result, ensure_ascii=False, indent=2)
     print(payload)
     if args.output_json:
         args.output_json.write_text(payload, encoding="utf-8")
+    if args.debug_log:
+        debug_payload = json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2)
+        args.debug_log.write_text(debug_payload, encoding="utf-8")
 
 
 if __name__ == "__main__":
