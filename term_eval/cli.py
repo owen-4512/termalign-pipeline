@@ -17,6 +17,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--target-txt", type=Path, help="Target txt for simple mode")
     parser.add_argument("--target-dir", type=Path, help="Target txt directory for batch mode")
     parser.add_argument(
+        "--report-level",
+        choices=["document", "batch", "both"],
+        default="batch",
+        help="Output score granularity: per-document, aggregated batch, or both.",
+    )
+    parser.add_argument(
         "--metrics",
         nargs="+",
         default=["all"],
@@ -39,6 +45,7 @@ def main() -> None:
         beta=args.beta,
         target_txt=args.target_txt,
         target_dir=args.target_dir,
+        report_level=args.report_level,
     )
 
     payload = json.dumps(result, ensure_ascii=False, indent=2)

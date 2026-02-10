@@ -56,7 +56,7 @@ pip install -r requirements.txt
 
 ## CLI 用法
 
-### 1) 跑全部指标（默认）
+### 1) 跑全部指标（默认，输出 batch 聚合分数）
 
 ```bash
 python term_eval_pipeline.py \
@@ -92,12 +92,34 @@ python term_eval_pipeline.py \
 
 也支持逗号写法：`--metrics accuracy,distance`。
 
+### 4) 输出 document 级别 + batch 级别
+
+```bash
+python term_eval_pipeline.py \
+  --term-align-tsv data/align.tsv \
+  --gold-jsonl data/gold.jsonl \
+  --mode batch \
+  --target-dir data/targets \
+  --report-level both \
+  --metrics all
+```
+
+`--report-level` 可选：
+- `document`：仅输出每个 `source_file` 的分数
+- `batch`：仅输出全量聚合分数（默认）
+- `both`：同时输出 document 与 batch
+
 ## 输出
 
-输出 JSON，字段按选择的指标动态出现，例如：
+输出 JSON 会包含：
 
+- 元信息：`mode`, `report_level`, `metrics`, `alpha`, `beta`, `num_records`
+- 当 `report_level=batch|both`：`batch_score`
+- 当 `report_level=document|both`：`document_scores`（列表，每个元素对应一个 `source_file`）
+
+各 score 对象字段按选择的指标动态出现，例如：
 - `f1`, `precision`, `recall`（accuracy）
 - `consistency`
 - `distance_penalty`
-- `final_score`（仅当 metrics=all）
+- `final_score`（仅当 `--metrics all`）
 
