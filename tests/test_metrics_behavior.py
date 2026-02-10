@@ -86,6 +86,36 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertAlmostEqual(recall, 2 / 3)
         self.assertAlmostEqual(f1, 2 / 3)
 
+    def test_accuracy_plural_variant_scores_full_for_ratio_term(self):
+        gold_map = build_gold_map([{"资本充足率": ["capital adequacy ratios"]}])
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "资本充足率": ["capital adequacy ratio"],
+                },
+            }
+        ]
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        self.assertAlmostEqual(precision, 1.0)
+        self.assertAlmostEqual(recall, 1.0)
+        self.assertAlmostEqual(f1, 1.0)
+
+    def test_accuracy_plural_variant_scores_full_for_liquidity_term(self):
+        gold_map = build_gold_map([{"流动性比率": ["liquidity ratios"]}])
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "流动性比率": ["liquidity ratio"],
+                },
+            }
+        ]
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        self.assertAlmostEqual(precision, 1.0)
+        self.assertAlmostEqual(recall, 1.0)
+        self.assertAlmostEqual(f1, 1.0)
+
     def test_accuracy_skips_terms_not_in_gold(self):
         gold_records = [{"术语A": ["Term X"]}]
         gold_map = build_gold_map(gold_records)
