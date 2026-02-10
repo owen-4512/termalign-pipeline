@@ -1,4 +1,8 @@
-"""Consistency metric based on entropy of translation variants."""
+"""Consistency metric based on entropy of translation variants.
+
+Consistency is computed from occurrence distribution only and is independent
+of whether variants are accurate against the gold dictionary.
+"""
 
 from __future__ import annotations
 

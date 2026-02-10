@@ -1,4 +1,8 @@
-"""Accuracy metric: precision/recall/F1 over term occurrences."""
+"""Accuracy metric: precision/recall/F1 over term occurrences.
+
+A source term is counted as correctly translated for an occurrence if the
+extracted variant matches *any* accepted reference translation in gold.
+"""
 
 from __future__ import annotations
 
