@@ -7,7 +7,7 @@ from collections import Counter
 from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 from .data_model import DistanceInputs
-from .metrics_accuracy import compute_occurrence_best_score
+from .metrics_accuracy import compute_occurrence_best_detail
 from .metrics_distance import shortest_distance, token_positions_by_variant
 from .normalization import normalize
 
@@ -46,7 +46,8 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 if not norm_var:
                     continue
 
-                best_score = compute_occurrence_best_score(norm_var, set(gold_refs))
+                best_detail = compute_occurrence_best_detail(norm_var, set(gold_refs))
+                best_score = float(best_detail["score"])
                 total_translation_occurrences += 1
                 total_original_term_occurrences += 1
                 score_sum += best_score
@@ -56,8 +57,12 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                         "zh_term": str(src_term),
                         "occurrence_index": idx,
                         "predicted_variant": str(variant),
-                        "predicted_variant_normalized": norm_var,
+                        "predicted_variant_normalized": best_detail["predicted_variant_normalized"],
+                        "predicted_tokens_canonical": best_detail["predicted_tokens_canonical"],
                         "gold_variants_normalized": gold_refs,
+                        "best_gold_variant_normalized": best_detail["best_gold_variant_normalized"],
+                        "best_gold_tokens_canonical": best_detail["best_gold_tokens_canonical"],
+                        "match_rule": best_detail["rule"],
                         "score": best_score,
                     }
                 )
