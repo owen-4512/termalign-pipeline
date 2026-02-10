@@ -13,8 +13,10 @@ from .normalization import normalize
 
 def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping[str, set[str]]) -> Dict[str, Any]:
     details: List[Dict[str, Any]] = []
+    skipped_terms: List[Dict[str, Any]] = []
     correct = 0
-    total = 0
+    total_translation_occurrences = 0
+    total_original_term_occurrences = 0
 
     for record in records:
         source_file = str(record.get("source_file", "__default__"))
@@ -28,13 +30,23 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
 
             norm_src = normalize(str(src_term))
             gold_refs = sorted(gold_map.get(norm_src, set()))
+            if not gold_refs:
+                skipped_terms.append(
+                    {
+                        "source_file": source_file,
+                        "zh_term": str(src_term),
+                        "reason": "term_not_in_gold",
+                    }
+                )
+                continue
 
             for idx, variant in enumerate(variants):
                 norm_var = normalize(str(variant))
                 if not norm_var:
                     continue
                 matched = norm_var in set(gold_refs)
-                total += 1
+                total_translation_occurrences += 1
+                total_original_term_occurrences += 1
                 if matched:
                     correct += 1
                 details.append(
@@ -50,19 +62,25 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                     }
                 )
 
-    precision = (correct / total) if total else 0.0
-    recall = precision
-    f1 = precision if precision else 0.0
+    precision = (correct / total_translation_occurrences) if total_translation_occurrences else 0.0
+    recall = (correct / total_original_term_occurrences) if total_original_term_occurrences else 0.0
+    if precision == 0.0 and recall == 0.0:
+        f1 = 0.0
+    else:
+        f1 = 2 * precision * recall / (precision + recall)
 
     return {
         "summary": {
             "correct_occurrences": correct,
-            "total_occurrences": total,
+            "total_translation_occurrences": total_translation_occurrences,
+            "total_original_term_occurrences": total_original_term_occurrences,
+            "skipped_terms_not_in_gold": len(skipped_terms),
             "precision": precision,
             "recall": recall,
             "f1": f1,
         },
         "occurrence_details": details,
+        "skipped_terms": skipped_terms,
     }
 
 

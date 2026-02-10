@@ -21,7 +21,7 @@ term_eval/
 
 ## 支持指标
 
-- `accuracy`：计算 `f1 / precision / recall`（一个中文术语可对应多个可接受英文译法，命中任一即算准确）
+- `accuracy`：计算 `f1 / precision / recall`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后一个中文术语可对应多个可接受英文译法，命中任一即算准确）
 - `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
 - `distance`：计算 shortest distance penalty
 

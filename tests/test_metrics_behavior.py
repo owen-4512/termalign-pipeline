@@ -25,6 +25,25 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertAlmostEqual(recall, 2 / 3)
         self.assertAlmostEqual(f1, 2 / 3)
 
+    def test_accuracy_skips_terms_not_in_gold(self):
+        gold_records = [{"术语A": ["Term X"]}]
+        gold_map = build_gold_map(gold_records)
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "术语A": ["Term X", "Wrong"],
+                    "术语B": ["Anything", "Another"],
+                },
+            }
+        ]
+
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        # 术语B 不在 gold 中，整项跳过，只统计术语A 的 2 个 occurrence
+        self.assertAlmostEqual(precision, 0.5)
+        self.assertAlmostEqual(recall, 0.5)
+        self.assertAlmostEqual(f1, 0.5)
+
     def test_consistency_entropy_uses_occurrences_only(self):
         records = [
             {

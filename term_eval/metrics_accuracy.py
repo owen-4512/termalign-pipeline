@@ -1,7 +1,8 @@
 """Accuracy metric: precision/recall/F1 over term occurrences.
 
-A source term is counted as correctly translated for an occurrence if the
-extracted variant matches *any* accepted reference translation in gold.
+A source term occurrence is evaluated only if the source term exists in gold.
+For evaluated occurrences, a prediction is correct when it matches *any*
+accepted reference translation for that source term.
 """
 
 from __future__ import annotations
@@ -25,7 +26,10 @@ def compute_accuracy(
 
         for src_term, variants in extracted_terms.items():
             norm_src = normalize(str(src_term))
-            references = gold_map.get(norm_src, set())
+            references = gold_map.get(norm_src)
+            if not references:
+                # Skip terms not present in gold.
+                continue
 
             if not isinstance(variants, Sequence) or isinstance(variants, (str, bytes)):
                 variants = [str(variants)]
@@ -34,8 +38,6 @@ def compute_accuracy(
             total_original_term_occurrences += len(normalized_variants)
             total_translation_occurrences += len(normalized_variants)
 
-            if not references:
-                continue
             for variant in normalized_variants:
                 if variant in references:
                     correct += 1
