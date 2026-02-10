@@ -116,6 +116,21 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertAlmostEqual(recall, 1.0)
         self.assertAlmostEqual(f1, 1.0)
 
+    def test_accuracy_keeps_service_token_intact_in_canonicalization(self):
+        gold_map = build_gold_map([{"银行分行服务": ["bank branch service"]}])
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "银行分行服务": ["bank branch services"],
+                },
+            }
+        ]
+        f1, precision, recall = compute_accuracy(records, gold_map)
+        self.assertAlmostEqual(precision, 1.0)
+        self.assertAlmostEqual(recall, 1.0)
+        self.assertAlmostEqual(f1, 1.0)
+
     def test_accuracy_skips_terms_not_in_gold(self):
         gold_records = [{"术语A": ["Term X"]}]
         gold_map = build_gold_map(gold_records)

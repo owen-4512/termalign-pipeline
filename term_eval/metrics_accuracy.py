@@ -30,8 +30,6 @@ def _canonical_token(token: str) -> str:
     """
     if len(token) > 4 and token.endswith("ies"):
         return token[:-3] + "y"
-    if len(token) > 3 and token.endswith("es") and not token.endswith(("ses", "xes", "zes", "ches", "shes")):
-        return token[:-2]
     if len(token) > 3 and token.endswith("s") and not token.endswith("ss"):
         return token[:-1]
     return token
