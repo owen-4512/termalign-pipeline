@@ -37,9 +37,9 @@ final_score = f1 - alpha * consistency - beta * distance_penalty
    - `source_file`
    - `zh_term`
    - `en_term`
-2. gold dictionary JSONL（每行一个 JSON object）
-   - 术语字段：`zh_term`（兼容 `source_term`/`term`/`source`）
-   - 参考翻译字段：`en_terms`（list）或 `en_term`（string）
+2. gold dictionary JSONL（每行一个 JSON object）支持两种格式：
+   - 字段格式：`{"zh_term": "术语", "en_terms": ["translation"]}`（兼容 `source_term`/`term`/`source` + `en_term`）
+   - 映射格式：`{"术语A": ["译法1", "译法2"], "术语B": ["译法"]}`
 3. 目标译文
    - simple：`--target-txt`
    - batch：`--target-dir`

@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
-from .io_utils import get_reference_translations, get_term_key, read_txt_tokens
+from .io_utils import iter_gold_pairs, read_txt_tokens
 from .normalization import normalize
 
 
@@ -20,9 +20,15 @@ class DistanceInputs:
 def build_gold_map(gold_records: Iterable[Mapping[str, Any]]) -> Dict[str, set[str]]:
     out: Dict[str, set[str]] = {}
     for rec in gold_records:
-        zh_term = normalize(get_term_key(rec))
-        refs = {normalize(v) for v in get_reference_translations(rec) if normalize(v)}
-        out[zh_term] = refs
+        for raw_term, raw_refs in iter_gold_pairs(rec):
+            zh_term = normalize(raw_term)
+            if not zh_term:
+                continue
+            refs = {normalize(v) for v in raw_refs if normalize(v)}
+            if zh_term in out:
+                out[zh_term].update(refs)
+            else:
+                out[zh_term] = refs
     return out
 
 

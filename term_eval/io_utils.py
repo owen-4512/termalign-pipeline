@@ -6,7 +6,7 @@ import csv
 import json
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Mapping
+from typing import Any, Dict, Iterable, List, Mapping, Tuple
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -57,3 +57,33 @@ def get_reference_translations(record: Mapping[str, Any]) -> List[str]:
             return [value]
 
     return []
+
+
+def iter_gold_pairs(record: Mapping[str, Any]) -> Iterable[Tuple[str, List[str]]]:
+    """Yield (source_term, reference_translations) from one gold JSON object.
+
+    Supported formats:
+    1) Field-based format, e.g.:
+       {"zh_term": "术语A", "en_terms": ["Term A"]}
+    2) Mapping format, e.g.:
+       {"术语A": ["Term A"], "术语B": ["Term B"]}
+    """
+    has_structured_keys = any(k in record for k in ("zh_term", "source_term", "term", "source"))
+
+    if has_structured_keys:
+        yield get_term_key(record), get_reference_translations(record)
+        return
+
+    for raw_term, raw_refs in record.items():
+        term = str(raw_term).strip()
+        if not term:
+            continue
+
+        if isinstance(raw_refs, list):
+            refs = [str(v) for v in raw_refs if str(v).strip()]
+        elif isinstance(raw_refs, str):
+            refs = [raw_refs] if raw_refs.strip() else []
+        else:
+            refs = []
+
+        yield term, refs
