@@ -17,7 +17,6 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
     skipped_terms: List[Dict[str, Any]] = []
     score_sum = 0.0
     total_translation_occurrences = 0
-    total_original_term_occurrences = 0
 
     for record in records:
         source_file = str(record.get("source_file", "__default__"))
@@ -49,7 +48,6 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 best_detail = compute_occurrence_best_detail(norm_var, set(gold_refs))
                 best_score = float(best_detail["score"])
                 total_translation_occurrences += 1
-                total_original_term_occurrences += 1
                 score_sum += best_score
                 details.append(
                     {
@@ -68,21 +66,13 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 )
 
     precision = (score_sum / total_translation_occurrences) if total_translation_occurrences else 0.0
-    recall = (score_sum / total_original_term_occurrences) if total_original_term_occurrences else 0.0
-    if precision == 0.0 and recall == 0.0:
-        f1 = 0.0
-    else:
-        f1 = 2 * precision * recall / (precision + recall)
 
     return {
         "summary": {
             "score_sum": score_sum,
             "total_translation_occurrences": total_translation_occurrences,
-            "total_original_term_occurrences": total_original_term_occurrences,
             "skipped_terms_not_in_gold": len(skipped_terms),
             "precision": precision,
-            "recall": recall,
-            "f1": f1,
         },
         "occurrence_details": details,
         "skipped_terms": skipped_terms,

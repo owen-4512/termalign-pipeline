@@ -14,7 +14,7 @@ def _extract_metric_summary(result: Dict[str, Any]) -> Dict[str, Any]:
     summary: Dict[str, Any] = {}
     batch_score = result.get("batch_score")
     if isinstance(batch_score, dict):
-        for key in ("f1", "precision", "recall", "consistency", "final_score"):
+        for key in ("precision", "consistency", "final_score"):
             if key in batch_score:
                 summary[key] = batch_score[key]
     return summary

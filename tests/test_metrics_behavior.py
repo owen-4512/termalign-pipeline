@@ -20,10 +20,8 @@ class TestMetricsBehavior(unittest.TestCase):
             }
         ]
 
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 2 / 3)
-        self.assertAlmostEqual(recall, 2 / 3)
-        self.assertAlmostEqual(f1, 2 / 3)
 
 
     def test_accuracy_predicted_contains_gold_scores_full(self):
@@ -36,10 +34,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 1.0)
-        self.assertAlmostEqual(recall, 1.0)
-        self.assertAlmostEqual(f1, 1.0)
 
     def test_accuracy_gold_contains_predicted_scores_token_ratio(self):
         gold_map = build_gold_map([{"术语A": ["cybersecurity risk assessment"]}])
@@ -51,10 +47,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 2 / 3)
-        self.assertAlmostEqual(recall, 2 / 3)
-        self.assertAlmostEqual(f1, 2 / 3)
 
     def test_accuracy_predicted_covers_gold_non_contiguous_scores_full(self):
         gold_map = build_gold_map([{"银行体系稳定": ["banking stability"]}])
@@ -66,10 +60,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 1.0)
-        self.assertAlmostEqual(recall, 1.0)
-        self.assertAlmostEqual(f1, 1.0)
 
     def test_accuracy_predicted_partial_of_gold_scores_ratio(self):
         gold_map = build_gold_map([{"楼宇按揭业务": ["mortgage lending business"]}])
@@ -81,10 +73,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 2 / 3)
-        self.assertAlmostEqual(recall, 2 / 3)
-        self.assertAlmostEqual(f1, 2 / 3)
 
     def test_accuracy_plural_variant_scores_full_for_ratio_term(self):
         gold_map = build_gold_map([{"资本充足率": ["capital adequacy ratios"]}])
@@ -96,10 +86,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 1.0)
-        self.assertAlmostEqual(recall, 1.0)
-        self.assertAlmostEqual(f1, 1.0)
 
     def test_accuracy_plural_variant_scores_full_for_liquidity_term(self):
         gold_map = build_gold_map([{"流动性比率": ["liquidity ratios"]}])
@@ -111,10 +99,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 1.0)
-        self.assertAlmostEqual(recall, 1.0)
-        self.assertAlmostEqual(f1, 1.0)
 
     def test_accuracy_keeps_service_token_intact_in_canonicalization(self):
         gold_map = build_gold_map([{"银行分行服务": ["bank branch service"]}])
@@ -126,10 +112,8 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             }
         ]
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         self.assertAlmostEqual(precision, 1.0)
-        self.assertAlmostEqual(recall, 1.0)
-        self.assertAlmostEqual(f1, 1.0)
 
     def test_accuracy_skips_terms_not_in_gold(self):
         gold_records = [{"术语A": ["Term X"]}]
@@ -144,11 +128,9 @@ class TestMetricsBehavior(unittest.TestCase):
             }
         ]
 
-        f1, precision, recall = compute_accuracy(records, gold_map)
+        precision = compute_accuracy(records, gold_map)
         # 术语B 不在 gold 中，整项跳过，只统计术语A 的 2 个 occurrence
         self.assertAlmostEqual(precision, 0.5)
-        self.assertAlmostEqual(recall, 0.5)
-        self.assertAlmostEqual(f1, 0.5)
 
     def test_consistency_entropy_uses_occurrences_only(self):
         records = [

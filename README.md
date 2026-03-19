@@ -20,13 +20,13 @@ term_eval/
 
 ## 支持指标
 
-- `accuracy`：计算 `f1 / precision / recall`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
+- `accuracy`：计算 `precision`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
 - `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
 
 当你选择 `all`（默认）时，额外输出：
 
 ```text
-final_score = f1 - alpha * consistency
+final_score = precision - alpha * consistency
 ```
 
 ## 输入
@@ -136,7 +136,7 @@ python term_eval_pipeline.py \
 
 CLI 标准输出会打印一个精简 JSON，仅包含：
 
-- `f1`, `precision`, `recall`
+- `precision`
 - `consistency`
 - `final_score`
 
@@ -149,6 +149,6 @@ CLI 标准输出会打印一个精简 JSON，仅包含：
 - 当 `report_level=document|both`：`document_scores`（列表，每个元素对应一个 `source_file`）
 
 各 score 对象字段按选择的指标动态出现，例如：
-- `f1`, `precision`, `recall`（accuracy）
+- `precision`（accuracy）
 - `consistency`
 - `final_score`（仅当 `--metrics all`）

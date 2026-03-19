@@ -54,19 +54,19 @@ def _compute_metric_bundle(
     beta: float,
 ) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
-    f1 = 0.0
+    precision = 0.0
     consistency = 0.0
 
     if "accuracy" in selected_metrics:
-        f1, precision, recall = compute_accuracy(records, gold_map)
-        result.update({"f1": f1, "precision": precision, "recall": recall})
+        precision = compute_accuracy(records, gold_map)
+        result["precision"] = precision
 
     if "consistency" in selected_metrics:
         consistency = compute_consistency(records)
         result["consistency"] = consistency
 
     if selected_metrics == sorted(AVAILABLE_METRICS):
-        result["final_score"] = f1 - alpha * consistency
+        result["final_score"] = precision - alpha * consistency
 
     return result
 
@@ -150,7 +150,7 @@ def run_evaluation(
     if include_debug:
         batch_scores = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), Mapping) else {}
         score_summary: Dict[str, Any] = {}
-        for key in ("f1", "precision", "recall", "consistency", "final_score"):
+        for key in ("precision", "consistency", "final_score"):
             if key in batch_scores:
                 score_summary[key] = batch_scores[key]
 

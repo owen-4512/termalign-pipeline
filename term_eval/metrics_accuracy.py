@@ -1,4 +1,4 @@
-"""Accuracy metric: precision/recall/F1 over term occurrences.
+"""Accuracy metric: precision over term occurrences.
 
 A source term occurrence is evaluated only if the source term exists in gold.
 For each evaluated occurrence, we assign a score against all accepted gold
@@ -12,7 +12,7 @@ translations for that source term and take the best score:
 
 from __future__ import annotations
 
-from typing import Any, Iterable, Mapping, Sequence, Tuple
+from typing import Any, Iterable, Mapping, Sequence
 
 from .normalization import normalize
 
@@ -101,10 +101,9 @@ def compute_occurrence_best_detail(predicted: str, references: set[str]) -> Mapp
 
 def compute_accuracy(
     records: Iterable[Mapping[str, Any]], gold_map: Mapping[str, set[str]]
-) -> Tuple[float, float, float]:
+) -> float:
     score_sum = 0.0
     total_translation_occurrences = 0
-    total_original_term_occurrences = 0
 
     for record in records:
         extracted_terms = record.get("extracted_terms", {})
@@ -122,17 +121,10 @@ def compute_accuracy(
                 variants = [str(variants)]
 
             normalized_variants = [normalize(str(v)) for v in variants if normalize(str(v))]
-            total_original_term_occurrences += len(normalized_variants)
             total_translation_occurrences += len(normalized_variants)
 
             for variant in normalized_variants:
                 detail = compute_occurrence_best_detail(variant, references)
                 score_sum += float(detail["score"])
 
-    precision = (score_sum / total_translation_occurrences) if total_translation_occurrences else 0.0
-    recall = (score_sum / total_original_term_occurrences) if total_original_term_occurrences else 0.0
-    if precision == 0.0 and recall == 0.0:
-        f1 = 0.0
-    else:
-        f1 = 2 * precision * recall / (precision + recall)
-    return f1, precision, recall
+    return (score_sum / total_translation_occurrences) if total_translation_occurrences else 0.0
