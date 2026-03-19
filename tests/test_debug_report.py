@@ -33,7 +33,7 @@ class TestDebugReport(unittest.TestCase):
             self.assertIn("debug", result)
             self.assertIn("accuracy", result["debug"])
             self.assertIn("consistency", result["debug"])
-            self.assertIn("distance", result["debug"])
+            self.assertIn("score_summary", result["debug"])
             self.assertGreater(len(result["debug"]["accuracy"]["occurrence_details"]), 0)
 
     def test_accuracy_debug_contains_normalized_and_canonical_match_details(self):

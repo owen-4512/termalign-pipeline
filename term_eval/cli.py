@@ -14,7 +14,7 @@ def _extract_metric_summary(result: Dict[str, Any]) -> Dict[str, Any]:
     summary: Dict[str, Any] = {}
     batch_score = result.get("batch_score")
     if isinstance(batch_score, dict):
-        for key in ("f1", "precision", "recall", "consistency", "distance_penalty", "final_score"):
+        for key in ("f1", "precision", "recall", "consistency", "final_score"):
             if key in batch_score:
                 summary[key] = batch_score[key]
     return summary
@@ -37,10 +37,10 @@ def parse_args() -> argparse.Namespace:
         "--metrics",
         nargs="+",
         default=["all"],
-        help="Metrics to run: all, accuracy, consistency, distance. You can pass comma-separated values.",
+        help="Metrics to run: all, accuracy, consistency. You can pass comma-separated values.",
     )
     parser.add_argument("--alpha", type=float, default=0.0, help="Hyperparameter for consistency in final score")
-    parser.add_argument("--beta", type=float, default=0.0, help="Hyperparameter for distance penalty in final score")
+    parser.add_argument("--beta", type=float, default=0.0, help="Reserved (distance metric removed).")
     parser.add_argument("--output-json", type=Path, help="Optional output JSON file")
     parser.add_argument("--debug-log", type=Path, help="Optional debug log JSON file with detailed metric traces")
     return parser.parse_args()

@@ -14,12 +14,11 @@ from .data_model import (
     collapse_records_for_simple_mode,
 )
 from .io_utils import read_jsonl, read_tsv
-from .debug_report import build_accuracy_debug, build_consistency_debug, build_distance_debug
+from .debug_report import build_accuracy_debug, build_consistency_debug
 from .metrics_accuracy import compute_accuracy
 from .metrics_consistency import compute_consistency
-from .metrics_distance import compute_shortest_distance_penalty
 
-AVAILABLE_METRICS = {"accuracy", "consistency", "distance"}
+AVAILABLE_METRICS = {"accuracy", "consistency"}
 AVAILABLE_REPORT_LEVELS = {"document", "batch", "both"}
 
 
@@ -57,7 +56,6 @@ def _compute_metric_bundle(
     result: Dict[str, Any] = {}
     f1 = 0.0
     consistency = 0.0
-    distance_penalty = 0.0
 
     if "accuracy" in selected_metrics:
         f1, precision, recall = compute_accuracy(records, gold_map)
@@ -67,12 +65,8 @@ def _compute_metric_bundle(
         consistency = compute_consistency(records)
         result["consistency"] = consistency
 
-    if "distance" in selected_metrics:
-        distance_penalty = compute_shortest_distance_penalty(records, token_map)
-        result["distance_penalty"] = distance_penalty
-
     if selected_metrics == sorted(AVAILABLE_METRICS):
-        result["final_score"] = f1 - alpha * consistency - beta * distance_penalty
+        result["final_score"] = f1 - alpha * consistency
 
     return result
 
@@ -107,15 +101,13 @@ def run_evaluation(
 
     token_map: Dict[str, DistanceInputs] = {}
     if mode == "simple":
-        if target_txt is None:
-            raise ValueError("--target-txt is required in simple mode")
-        token_map = build_token_map_simple(target_txt)
+        if target_txt is not None:
+            token_map = build_token_map_simple(target_txt)
         records = collapse_records_for_simple_mode(records)
     elif mode == "batch":
-        if target_dir is None:
-            raise ValueError("--target-dir is required in batch mode")
-        source_files = [str(rec.get("source_file", "")) for rec in records]
-        token_map = build_token_map_batch(target_dir, source_files)
+        if target_dir is not None:
+            source_files = [str(rec.get("source_file", "")) for rec in records]
+            token_map = build_token_map_batch(target_dir, source_files)
     else:
         raise ValueError("mode must be 'simple' or 'batch'")
 
@@ -158,7 +150,7 @@ def run_evaluation(
     if include_debug:
         batch_scores = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), Mapping) else {}
         score_summary: Dict[str, Any] = {}
-        for key in ("f1", "precision", "recall", "consistency", "distance_penalty", "final_score"):
+        for key in ("f1", "precision", "recall", "consistency", "final_score"):
             if key in batch_scores:
                 score_summary[key] = batch_scores[key]
 
@@ -176,8 +168,6 @@ def run_evaluation(
             debug_info["accuracy"] = build_accuracy_debug(records, gold_map)
         if "consistency" in selected_metrics:
             debug_info["consistency"] = build_consistency_debug(records)
-        if "distance" in selected_metrics:
-            debug_info["distance"] = build_distance_debug(records, token_map)
         result["debug"] = debug_info
 
     return result

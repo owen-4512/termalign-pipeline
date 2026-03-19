@@ -16,19 +16,17 @@ term_eval/
   data_model.py                # 数据转换与 token map
   metrics_accuracy.py          # compute_accuracy
   metrics_consistency.py       # compute_consistency
-  metrics_distance.py          # compute_shortest_distance_penalty
 ```
 
 ## 支持指标
 
 - `accuracy`：计算 `f1 / precision / recall`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
 - `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
-- `distance`：计算 shortest distance penalty
 
 当你选择 `all`（默认）时，额外输出：
 
 ```text
-final_score = f1 - alpha * consistency - beta * distance_penalty
+final_score = f1 - alpha * consistency
 ```
 
 ## 输入
@@ -70,8 +68,7 @@ python term_eval_pipeline.py \
   --gold-jsonl data/gold.jsonl \
   --mode simple \
   --target-txt data/target.txt \
-  --alpha 0.2 \
-  --beta 0.1
+  --alpha 0.2
 ```
 
 ### 2) 只跑单个指标
@@ -93,10 +90,10 @@ python term_eval_pipeline.py \
   --gold-jsonl data/gold.jsonl \
   --mode batch \
   --target-dir data/targets \
-  --metrics accuracy distance
+  --metrics accuracy consistency
 ```
 
-也支持逗号写法：`--metrics accuracy,distance`。
+也支持逗号写法：`--metrics accuracy,consistency`。
 
 ### 4) 输出 document 级别 + batch 级别
 
@@ -127,14 +124,12 @@ python term_eval_pipeline.py \
   --report-level both \
   --metrics all \
   --alpha 0.2 \
-  --beta 0.1 \
   --debug-log debug_metrics.json
 ```
 
 `debug_metrics.json` 中会记录：
 - accuracy：每个术语 occurrence 的 gold 候选、单项得分（可为 0~1 的小数）
 - consistency：每个中文术语的译法计数、概率分布、entropy
-- distance：出现多个译法的术语、各译法位置、最短距离与 penalty
 - 额外元信息：record 数、source term 数、所选 metrics 等
 
 ## 输出
@@ -143,7 +138,6 @@ CLI 标准输出会打印一个精简 JSON，仅包含：
 
 - `f1`, `precision`, `recall`
 - `consistency`
-- `distance_penalty`
 - `final_score`
 
 如果你传入 `--output-json`，文件中会保存完整结果 JSON（含元信息、document/batch 结构等）。
@@ -157,5 +151,4 @@ CLI 标准输出会打印一个精简 JSON，仅包含：
 各 score 对象字段按选择的指标动态出现，例如：
 - `f1`, `precision`, `recall`（accuracy）
 - `consistency`
-- `distance_penalty`
 - `final_score`（仅当 `--metrics all`）
