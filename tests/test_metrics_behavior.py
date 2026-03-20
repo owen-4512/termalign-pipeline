@@ -68,6 +68,18 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertEqual(detail["match_rule"], "predicted_covers_gold")
         self.assertAlmostEqual(detail["score"], 1.0)
 
+    def test_accuracy_normalizes_predicted_and_gold_with_same_spacy_path(self):
+        detail = compute_occurrence_best_detail(
+            "Hong Kong Institute of Certified Public Accountants",
+            {"hong kong institute of certified public accountants"},
+        )
+        self.assertEqual(
+            detail["predicted_variant_normalized"],
+            detail["best_gold_variant_normalized"],
+        )
+        self.assertEqual(detail["match_rule"], "exact_normalized")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_accepts_multiple_gold_variants(self):
         gold_records = [
             {"术语A": ["Term X", "Term Y"]},

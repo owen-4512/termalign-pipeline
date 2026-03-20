@@ -29,7 +29,7 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 variants = [str(variants)]
 
             norm_src = normalize(str(src_term))
-            gold_refs = sorted(gold_map.get(norm_src, set()))
+            gold_refs = sorted({normalize(ref) for ref in gold_map.get(norm_src, set()) if normalize(ref)})
             if not gold_refs:
                 skipped_terms.append(
                     {

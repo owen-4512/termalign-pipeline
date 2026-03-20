@@ -75,7 +75,8 @@ def compute_occurrence_best_score(predicted: str, references: set[str]) -> float
 
 def compute_occurrence_best_detail(predicted: str, references: set[str]) -> Mapping[str, Any]:
     predicted_norm = normalize(predicted)
-    if not predicted_norm or not references:
+    normalized_refs = sorted({normalize(ref) for ref in references if normalize(ref)})
+    if not predicted_norm or not normalized_refs:
         return {
             "predicted_variant_normalized": predicted_norm,
             "predicted_tokens_canonical": _tokens(predicted_norm),
@@ -89,7 +90,7 @@ def compute_occurrence_best_detail(predicted: str, references: set[str]) -> Mapp
     best_rule = "no_match"
     best_score = -1.0
     best_overlap = -1
-    for ref in sorted(references):
+    for ref in normalized_refs:
         score, rule = _occurrence_score_with_rule(predicted_norm, ref)
         overlap = _token_overlap_count(predicted_norm, ref)
         if (
