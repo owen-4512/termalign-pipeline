@@ -48,6 +48,8 @@ def normalize(text: str) -> str:
             lemma = _singularize_token(lemma)
             if lemma == "licence":
                 lemma = "license"
+            if lemma in {"authorized", "authorised"}:
+                lemma = "authorize"
             tokens.append(lemma)
     return " ".join(tokens)
 

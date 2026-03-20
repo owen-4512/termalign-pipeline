@@ -41,6 +41,19 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertEqual(detail["match_rule"], "exact_normalized")
         self.assertAlmostEqual(detail["score"], 1.0)
 
+    def test_accuracy_normalizes_authorized_to_authorize_consistently(self):
+        detail = compute_occurrence_best_detail(
+            "prudential requirements for authorized institutions",
+            {"authorize institution", "ai"},
+        )
+        self.assertEqual(
+            detail["predicted_variant_normalized"],
+            "prudential requirement for authorize institution",
+        )
+        self.assertEqual(detail["best_gold_variant_normalized"], "authorize institution")
+        self.assertEqual(detail["match_rule"], "predicted_covers_gold")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_accepts_multiple_gold_variants(self):
         gold_records = [
             {"术语A": ["Term X", "Term Y"]},
