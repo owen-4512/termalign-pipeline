@@ -41,6 +41,20 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertEqual(detail["match_rule"], "exact_normalized")
         self.assertAlmostEqual(detail["score"], 1.0)
 
+    def test_accuracy_normalizes_open_ended_consistently_for_gold_and_predicted(self):
+        detail = compute_occurrence_best_detail(
+            "Open-ended Fund Company Structure",
+            {"open ended fund company structure"},
+        )
+        self.assertEqual(detail["predicted_variant_normalized"], "open end fund company structure")
+        self.assertEqual(detail["best_gold_variant_normalized"], "open end fund company structure")
+        self.assertEqual(
+            detail["best_gold_tokens_canonical"],
+            ["open", "end", "fund", "company", "structure"],
+        )
+        self.assertEqual(detail["match_rule"], "exact_normalized")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_normalizes_authorized_to_authorize_consistently(self):
         detail = compute_occurrence_best_detail(
             "prudential requirements for authorized institutions",

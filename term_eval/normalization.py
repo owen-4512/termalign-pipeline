@@ -46,6 +46,7 @@ def normalize(text: str) -> str:
             lemma = token.text.strip().lower()
         if lemma:
             lemma = _singularize_token(lemma)
+            lemma = _normalize_verb_form(lemma)
             if lemma == "licence":
                 lemma = "license"
             if lemma in {"authorized", "authorised"}:
@@ -73,4 +74,13 @@ def _singularize_token(token: str) -> str:
         return token[:-2]
     if token.endswith("s") and not token.endswith(("ss", "us", "is")):
         return token[:-1]
+    return token
+
+
+def _normalize_verb_form(token: str) -> str:
+    """Best-effort canonicalization for frequent past-tense/adjectival forms."""
+    if len(token) <= 3:
+        return token
+    if token in {"ended", "open-ended"}:
+        return "end"
     return token
