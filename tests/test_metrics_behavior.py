@@ -30,6 +30,17 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertEqual(detail["match_rule"], "exact_normalized")
         self.assertAlmostEqual(detail["score"], 1.0)
 
+    def test_accuracy_normalizes_moving_to_move_for_gold_and_predicted(self):
+        detail = compute_occurrence_best_detail(
+            "five-day moving averages",
+            {"five day moving average"},
+        )
+        self.assertEqual(detail["predicted_variant_normalized"], "five day move average")
+        self.assertEqual(detail["best_gold_variant_normalized"], "five day move average")
+        self.assertEqual(detail["best_gold_tokens_canonical"], ["five", "day", "move", "average"])
+        self.assertEqual(detail["match_rule"], "exact_normalized")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_accepts_multiple_gold_variants(self):
         gold_records = [
             {"术语A": ["Term X", "Term Y"]},

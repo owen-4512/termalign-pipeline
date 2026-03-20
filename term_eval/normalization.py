@@ -53,9 +53,16 @@ def normalize(text: str) -> str:
 
 
 def _singularize_token(token: str) -> str:
-    """Best-effort singularization for common English plural nouns."""
+    """Best-effort canonicalization for common English inflections."""
     if len(token) <= 3:
         return token
+    if token.endswith("ing") and len(token) > 5:
+        base = token[:-3]
+        if len(base) >= 2 and base[-1] == base[-2]:
+            base = base[:-1]
+        if base.endswith("v"):
+            return base + "e"
+        return base
     if token.endswith("ies") and len(token) > 4:
         return token[:-3] + "y"
     if token.endswith("sses"):
