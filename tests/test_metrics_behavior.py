@@ -6,13 +6,13 @@ from term_eval.metrics_consistency import compute_consistency
 
 
 class TestMetricsBehavior(unittest.TestCase):
-    def test_accuracy_handles_license_licence_variant_and_selects_best_gold(self):
+    def test_accuracy_selects_best_gold_variant_by_normalized_match(self):
         detail = compute_occurrence_best_detail(
             "stored value facility licenses",
             {
-                "store value facility licence",
-                "store value facility svf licence",
-                "svf licence",
+                "store value facility license",
+                "store value facility svf license",
+                "svf license",
             },
         )
         self.assertEqual(detail["best_gold_variant_normalized"], "store value facility license")

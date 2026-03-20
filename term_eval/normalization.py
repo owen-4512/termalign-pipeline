@@ -20,7 +20,10 @@ def _get_nlp() -> Language:
     except OSError:
         nlp = spacy.blank("en")
         if "lemmatizer" not in nlp.pipe_names:
-            nlp.add_pipe("lemmatizer", config={"mode": "rule"})
+            try:
+                nlp.add_pipe("lemmatizer", config={"mode": "lookup"})
+            except Exception:
+                nlp.add_pipe("lemmatizer", config={"mode": "rule"})
         nlp.initialize()
         return nlp
 
@@ -45,42 +48,5 @@ def normalize(text: str) -> str:
         if not lemma or lemma == "-pron-":
             lemma = token.text.strip().lower()
         if lemma:
-            lemma = _singularize_token(lemma)
-            lemma = _normalize_verb_form(lemma)
-            if lemma == "licence":
-                lemma = "license"
-            if lemma in {"authorized", "authorised"}:
-                lemma = "authorize"
             tokens.append(lemma)
     return " ".join(tokens)
-
-
-def _singularize_token(token: str) -> str:
-    """Best-effort canonicalization for common English inflections."""
-    if len(token) <= 3:
-        return token
-    if token.endswith("ing") and len(token) > 5:
-        base = token[:-3]
-        if len(base) >= 2 and base[-1] == base[-2]:
-            base = base[:-1]
-        if base.endswith("v"):
-            return base + "e"
-        return base
-    if token.endswith("ies") and len(token) > 4:
-        return token[:-3] + "y"
-    if token.endswith("sses"):
-        return token[:-2]
-    if token.endswith(("xes", "zes", "ches", "shes")):
-        return token[:-2]
-    if token.endswith("s") and not token.endswith(("ss", "us", "is")):
-        return token[:-1]
-    return token
-
-
-def _normalize_verb_form(token: str) -> str:
-    """Best-effort canonicalization for frequent past-tense/adjectival forms."""
-    if len(token) <= 3:
-        return token
-    if token in {"ended", "open-ended"}:
-        return "end"
-    return token
