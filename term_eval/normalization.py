@@ -45,5 +45,7 @@ def normalize(text: str) -> str:
         if not lemma or lemma == "-pron-":
             lemma = token.text.strip().lower()
         if lemma:
+            if lemma == "licence":
+                lemma = "license"
             tokens.append(lemma)
     return " ".join(tokens)

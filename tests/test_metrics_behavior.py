@@ -1,11 +1,24 @@
 import unittest
 
 from term_eval.data_model import build_gold_map
-from term_eval.metrics_accuracy import compute_accuracy
+from term_eval.metrics_accuracy import compute_accuracy, compute_occurrence_best_detail
 from term_eval.metrics_consistency import compute_consistency
 
 
 class TestMetricsBehavior(unittest.TestCase):
+    def test_accuracy_handles_license_licence_variant_and_selects_best_gold(self):
+        detail = compute_occurrence_best_detail(
+            "stored value facility licenses",
+            {
+                "store value facility licence",
+                "store value facility svf licence",
+                "svf licence",
+            },
+        )
+        self.assertEqual(detail["best_gold_variant_normalized"], "store value facility license")
+        self.assertEqual(detail["match_rule"], "exact_normalized")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_accepts_multiple_gold_variants(self):
         gold_records = [
             {"术语A": ["Term X", "Term Y"]},

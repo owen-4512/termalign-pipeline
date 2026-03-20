@@ -38,6 +38,12 @@ def _occurrence_score(predicted_norm: str, gold_norm: str) -> float:
     return _occurrence_score_with_rule(predicted_norm, gold_norm)[0]
 
 
+def _token_overlap_count(predicted_norm: str, gold_norm: str) -> int:
+    predicted = set(_tokens(predicted_norm))
+    gold = set(_tokens(gold_norm))
+    return len(predicted & gold)
+
+
 def _occurrence_score_with_rule(predicted_norm: str, gold_norm: str) -> tuple[float, str]:
     if not predicted_norm or not gold_norm:
         return 0.0, "empty"
@@ -82,12 +88,19 @@ def compute_occurrence_best_detail(predicted: str, references: set[str]) -> Mapp
     best_ref = None
     best_rule = "no_match"
     best_score = -1.0
-    for ref in references:
+    best_overlap = -1
+    for ref in sorted(references):
         score, rule = _occurrence_score_with_rule(predicted_norm, ref)
-        if score > best_score:
+        overlap = _token_overlap_count(predicted_norm, ref)
+        if (
+            score > best_score
+            or (score == best_score and overlap > best_overlap)
+            or (score == best_score and overlap == best_overlap and (best_ref is None or ref < best_ref))
+        ):
             best_score = score
             best_ref = ref
             best_rule = rule
+            best_overlap = overlap
 
     return {
         "predicted_variant_normalized": predicted_norm,
