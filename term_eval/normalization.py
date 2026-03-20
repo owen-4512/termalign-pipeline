@@ -48,5 +48,43 @@ def normalize(text: str) -> str:
         if not lemma or lemma == "-pron-":
             lemma = token.text.strip().lower()
         if lemma:
+            lemma = _normalize_inflection(lemma)
             tokens.append(lemma)
     return " ".join(tokens)
+
+
+def _normalize_inflection(token: str) -> str:
+    """General inflection normalization for cases spaCy may miss in fallback mode.
+
+    This keeps the rule generic (plural/participle/past-tense handling) and is
+    applied equally to predicted and gold terms through the shared `normalize()`
+    path.
+    """
+    if len(token) <= 3:
+        return token
+
+    if token.endswith("ies") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith("ing") and len(token) > 5:
+        base = token[:-3]
+        if len(base) > 2 and base[-1] == base[-2]:
+            base = base[:-1]
+        if base.endswith("v"):
+            return base + "e"
+        return base
+    if token.endswith("ied") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith("ed") and len(token) > 4:
+        base = token[:-2]
+        if len(base) > 2 and base[-1] == base[-2]:
+            base = base[:-1]
+        if base.endswith("iz"):
+            return base + "e"
+        return base
+    if token.endswith("sses"):
+        return token[:-2]
+    if token.endswith(("xes", "zes", "ches", "shes")):
+        return token[:-2]
+    if token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token

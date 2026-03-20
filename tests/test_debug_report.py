@@ -63,10 +63,43 @@ class TestDebugReport(unittest.TestCase):
             self.assertEqual(len(details), 1)
             item = details[0]
             self.assertEqual(item["predicted_variant_normalized"], "capital adequacy ratio")
-            self.assertEqual(item["best_gold_variant_normalized"], "capital adequacy ratios")
+            self.assertEqual(item["best_gold_variant_normalized"], "capital adequacy ratio")
             self.assertEqual(item["predicted_tokens_canonical"], ["capital", "adequacy", "ratio"])
             self.assertEqual(item["best_gold_tokens_canonical"], ["capital", "adequacy", "ratio"])
-            self.assertEqual(item["match_rule"], "predicted_covers_gold")
+            self.assertEqual(item["match_rule"], "exact_normalized")
+            self.assertAlmostEqual(item["score"], 1.0)
+
+    def test_accuracy_debug_normalizes_open_ended_in_gold_and_predicted(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            (d / "align.tsv").write_text(
+                "source_file\tzh_term\ten_term\tsimilarity\tzh_source\ten_source\tzh_confidence\ten_confidence\tzh_sentence\ten_sentence\n"
+                "s1.txt\t開放式基金型公司結構\tOpen-ended Fund Company Structure\t1\t-\t-\t1\t1\t-\t-\n",
+                encoding="utf-8",
+            )
+            (d / "gold.jsonl").write_text(
+                '{"開放式基金型公司結構": ["open ended fund company structure"]}\n',
+                encoding="utf-8",
+            )
+            (d / "target.txt").write_text("Open-ended Fund Company Structure", encoding="utf-8")
+
+            result = run_evaluation(
+                term_align_tsv=d / "align.tsv",
+                gold_jsonl=d / "gold.jsonl",
+                mode="simple",
+                metrics=["accuracy"],
+                alpha=0.2,
+                beta=0.1,
+                target_txt=d / "target.txt",
+                report_level="batch",
+                include_debug=True,
+            )
+
+            item = result["debug"]["accuracy"]["occurrence_details"][0]
+            self.assertEqual(item["predicted_variant_normalized"], "open end fund company structure")
+            self.assertEqual(item["best_gold_variant_normalized"], "open end fund company structure")
+            self.assertEqual(item["best_gold_tokens_canonical"], ["open", "end", "fund", "company", "structure"])
+            self.assertEqual(item["match_rule"], "exact_normalized")
             self.assertAlmostEqual(item["score"], 1.0)
 
     def test_accuracy_debug_canonical_tokens_do_not_over_stem_service(self):
