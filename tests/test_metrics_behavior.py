@@ -19,6 +19,17 @@ class TestMetricsBehavior(unittest.TestCase):
         self.assertEqual(detail["match_rule"], "exact_normalized")
         self.assertAlmostEqual(detail["score"], 1.0)
 
+    def test_accuracy_singularizes_plural_nouns_in_gold_and_predicted(self):
+        detail = compute_occurrence_best_detail(
+            "primary liquidity providers",
+            {"primary liquidity providers"},
+        )
+        self.assertEqual(detail["predicted_variant_normalized"], "primary liquidity provider")
+        self.assertEqual(detail["best_gold_variant_normalized"], "primary liquidity provider")
+        self.assertEqual(detail["best_gold_tokens_canonical"], ["primary", "liquidity", "provider"])
+        self.assertEqual(detail["match_rule"], "exact_normalized")
+        self.assertAlmostEqual(detail["score"], 1.0)
+
     def test_accuracy_accepts_multiple_gold_variants(self):
         gold_records = [
             {"术语A": ["Term X", "Term Y"]},

@@ -45,7 +45,23 @@ def normalize(text: str) -> str:
         if not lemma or lemma == "-pron-":
             lemma = token.text.strip().lower()
         if lemma:
+            lemma = _singularize_token(lemma)
             if lemma == "licence":
                 lemma = "license"
             tokens.append(lemma)
     return " ".join(tokens)
+
+
+def _singularize_token(token: str) -> str:
+    """Best-effort singularization for common English plural nouns."""
+    if len(token) <= 3:
+        return token
+    if token.endswith("ies") and len(token) > 4:
+        return token[:-3] + "y"
+    if token.endswith("sses"):
+        return token[:-2]
+    if token.endswith(("xes", "zes", "ches", "shes")):
+        return token[:-2]
+    if token.endswith("s") and not token.endswith(("ss", "us", "is")):
+        return token[:-1]
+    return token
