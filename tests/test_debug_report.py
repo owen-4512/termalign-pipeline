@@ -130,6 +130,39 @@ class TestDebugReport(unittest.TestCase):
             self.assertEqual(item["best_gold_tokens_canonical"], ["bank", "branch", "service"])
             self.assertAlmostEqual(item["score"], 1.0)
 
+    def test_cross_document_consistency_debug_is_separate_section(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            d = Path(tmpdir)
+            (d / "align.tsv").write_text(
+                "source_file\tzh_term\ten_term\tsimilarity\tzh_source\ten_source\tzh_confidence\ten_confidence\tzh_sentence\ten_sentence\n"
+                "s1.txt\t术语A\tTerm X\t1\t-\t-\t1\t1\t-\t-\n"
+                "s1.txt\t术语A\tTerm Y\t1\t-\t-\t1\t1\t-\t-\n"
+                "s2.txt\t术语A\tTerm X\t1\t-\t-\t1\t1\t-\t-\n",
+                encoding="utf-8",
+            )
+            (d / "gold.jsonl").write_text('{"术语A": ["Term X"]}\n', encoding="utf-8")
+            (d / "s1.txt").write_text("Term X Term Y", encoding="utf-8")
+            (d / "s2.txt").write_text("Term X", encoding="utf-8")
+
+            result = run_evaluation(
+                term_align_tsv=d / "align.tsv",
+                gold_jsonl=d / "gold.jsonl",
+                mode="batch",
+                metrics=["consistency"],
+                alpha=0.2,
+                beta=0.1,
+                target_dir=d,
+                report_level="batch",
+                include_debug=True,
+                include_cross_document_consistency=True,
+            )
+
+            self.assertIn("cross_document_consistency", result["batch_score"])
+            self.assertIn("consistency", result["debug"])
+            self.assertIn("cross_document_consistency", result["debug"])
+            self.assertIn("summary", result["debug"]["cross_document_consistency"])
+            self.assertIn("term_details", result["debug"]["cross_document_consistency"])
+
 
 if __name__ == "__main__":
     unittest.main()

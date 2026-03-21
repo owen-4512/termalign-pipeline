@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import math
-from collections import Counter
+from collections import Counter, defaultdict
 from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 from .data_model import DistanceInputs
@@ -121,6 +121,76 @@ def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, A
     return {
         "summary": {
             "num_terms": len(entropies),
+            "mean_entropy": (sum(entropies) / len(entropies)) if entropies else 0.0,
+        },
+        "term_details": details,
+    }
+
+
+def build_cross_document_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+    term_variants: dict[str, list[str]] = defaultdict(list)
+    term_docs: dict[str, set[str]] = defaultdict(set)
+    term_variant_counts_by_doc: dict[str, dict[str, Counter[str]]] = defaultdict(dict)
+
+    for record in records:
+        source_file = str(record.get("source_file", "__default__"))
+        extracted_terms = record.get("extracted_terms", {})
+        if not isinstance(extracted_terms, Mapping):
+            continue
+
+        for src_term, variants in extracted_terms.items():
+            if not isinstance(variants, Sequence) or isinstance(variants, (str, bytes)):
+                variants = [str(variants)]
+
+            norm_term = normalize(str(src_term))
+            if not norm_term:
+                continue
+            norm_variants = [normalize(str(v)) for v in variants if normalize(str(v))]
+            if not norm_variants:
+                continue
+
+            term_docs[norm_term].add(source_file)
+            term_variants[norm_term].extend(norm_variants)
+            term_variant_counts_by_doc[norm_term][source_file] = Counter(norm_variants)
+
+    details: List[Dict[str, Any]] = []
+    entropies: List[float] = []
+    for norm_term in sorted(term_docs.keys()):
+        docs = sorted(term_docs[norm_term])
+        if len(docs) < 2:
+            continue
+
+        counts = Counter(term_variants[norm_term])
+        total = sum(counts.values())
+        probs: Dict[str, float] = {}
+        entropy = 0.0
+        if total > 0 and len(counts) > 1:
+            for k, c in counts.items():
+                p = c / total
+                probs[k] = p
+                entropy -= p * math.log2(p)
+
+        entropies.append(entropy)
+        details.append(
+            {
+                "zh_term_normalized": norm_term,
+                "num_documents": len(docs),
+                "documents": docs,
+                "num_occurrences": total,
+                "num_distinct_variants": len(counts),
+                "variant_counts_normalized": dict(counts),
+                "variant_probabilities": probs,
+                "variant_counts_by_document": {
+                    doc: dict(term_variant_counts_by_doc[norm_term].get(doc, Counter()))
+                    for doc in docs
+                },
+                "entropy": entropy,
+            }
+        )
+
+    return {
+        "summary": {
+            "num_cross_document_terms": len(entropies),
             "mean_entropy": (sum(entropies) / len(entropies)) if entropies else 0.0,
         },
         "term_details": details,

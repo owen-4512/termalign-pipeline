@@ -2,7 +2,7 @@ import unittest
 
 from term_eval.data_model import build_gold_map
 from term_eval.metrics_accuracy import compute_accuracy, compute_occurrence_best_detail
-from term_eval.metrics_consistency import compute_consistency
+from term_eval.metrics_consistency import compute_consistency, compute_cross_document_consistency
 
 
 class TestMetricsBehavior(unittest.TestCase):
@@ -222,6 +222,27 @@ class TestMetricsBehavior(unittest.TestCase):
         consistency = compute_consistency(records)
         # H(2/3,1/3)=~0.9182958341, 与术语B(0)平均 => ~0.459147917
         self.assertAlmostEqual(consistency, 0.459147917, places=6)
+
+    def test_cross_document_consistency_only_counts_terms_in_multiple_files(self):
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {
+                    "术语A": ["Term X", "Term Y"],
+                    "术语B": ["Only One"],
+                },
+            },
+            {
+                "source_file": "s2.txt",
+                "extracted_terms": {
+                    "术语A": ["Term X", "Term X"],
+                    "术语C": ["Another One"],
+                },
+            },
+        ]
+        # 只有术语A跨文件，分布为 X:3, Y:1 => H = -0.75log2(0.75)-0.25log2(0.25)=0.811278...
+        score = compute_cross_document_consistency(records)
+        self.assertAlmostEqual(score, 0.811278124459, places=6)
 
 
 if __name__ == "__main__":

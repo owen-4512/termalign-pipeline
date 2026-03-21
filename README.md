@@ -22,6 +22,7 @@ term_eval/
 
 - `accuracy`：计算 `precision`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
 - `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
+- `cross_document_consistency`（可选）：在 batch 场景下，对“出现在 2 个及以上文件中的同一术语”聚合其跨文件 occurrences 的译法分布并计算 entropy（该项通过 CLI 开关启用）
 
 当你选择 `all`（默认）时，额外输出：
 
@@ -112,8 +113,22 @@ python term_eval_pipeline.py \
 - `batch`：仅输出全量聚合分数（默认）
 - `both`：同时输出 document 与 batch
 
+### 5) 启用跨文件 consistency
 
-### 5) 输出详细 debug 日志
+```bash
+python term_eval_pipeline.py \
+  --term-align-tsv data/align.tsv \
+  --gold-jsonl data/gold.jsonl \
+  --mode batch \
+  --target-dir data/targets \
+  --metrics consistency \
+  --cross-document-consistency
+```
+
+启用后，`batch_score` 中会增加：
+- `cross_document_consistency`
+
+### 6) 输出详细 debug 日志（总 log + 子 log）
 
 ```bash
 python term_eval_pipeline.py \
@@ -124,12 +139,21 @@ python term_eval_pipeline.py \
   --report-level both \
   --metrics all \
   --alpha 0.2 \
+  --cross-document-consistency \
   --debug-log debug_metrics.json
 ```
 
-`debug_metrics.json` 中会记录：
+会输出：
+- 一个总 log：`debug_metrics.json`
+- 一个子 log 目录：默认 `debug_metrics_sublogs/`（可通过 `--debug-sublogs-dir` 指定）
+  - `accuracy.json`
+  - `consistency_document.json`
+  - `cross_document_consistency.json`（仅当启用 `--cross-document-consistency`）
+
+总 log `debug_metrics.json` 中会记录：
 - accuracy：每个术语 occurrence 的 gold 候选、单项得分（可为 0~1 的小数）
-- consistency：每个中文术语的译法计数、概率分布、entropy
+- consistency：单文件（document 内）每个中文术语的译法计数、概率分布、entropy
+- cross_document_consistency：跨文件术语的译法计数、文件分布、entropy（单独分区，不混入单文件 consistency）
 - 额外元信息：record 数、source term 数、所选 metrics 等
 
 ## 输出
@@ -138,6 +162,7 @@ CLI 标准输出会打印一个精简 JSON，仅包含：
 
 - `precision`
 - `consistency`
+- `cross_document_consistency`（启用时）
 - `final_score`
 
 如果你传入 `--output-json`，文件中会保存完整结果 JSON（含元信息、document/batch 结构等）。
@@ -151,4 +176,5 @@ CLI 标准输出会打印一个精简 JSON，仅包含：
 各 score 对象字段按选择的指标动态出现，例如：
 - `precision`（accuracy）
 - `consistency`
+- `cross_document_consistency`（启用时）
 - `final_score`（仅当 `--metrics all`）

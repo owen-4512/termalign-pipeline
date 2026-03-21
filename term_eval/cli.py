@@ -14,10 +14,25 @@ def _extract_metric_summary(result: Dict[str, Any]) -> Dict[str, Any]:
     summary: Dict[str, Any] = {}
     batch_score = result.get("batch_score")
     if isinstance(batch_score, dict):
-        for key in ("precision", "consistency", "final_score"):
+        for key in ("precision", "consistency", "cross_document_consistency", "final_score"):
             if key in batch_score:
                 summary[key] = batch_score[key]
     return summary
+
+
+def _write_debug_sublogs(debug: Dict[str, Any], output_dir: Path) -> None:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    mapping = {
+        "accuracy": "accuracy.json",
+        "consistency": "consistency_document.json",
+        "cross_document_consistency": "cross_document_consistency.json",
+    }
+    for key, filename in mapping.items():
+        if key in debug:
+            (output_dir / filename).write_text(
+                json.dumps(debug[key], ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
 
 
 def parse_args() -> argparse.Namespace:
@@ -39,10 +54,20 @@ def parse_args() -> argparse.Namespace:
         default=["all"],
         help="Metrics to run: all, accuracy, consistency. You can pass comma-separated values.",
     )
+    parser.add_argument(
+        "--cross-document-consistency",
+        action="store_true",
+        help="Also compute batch-level cross-document consistency for terms that appear in >=2 source files.",
+    )
     parser.add_argument("--alpha", type=float, default=0.0, help="Hyperparameter for consistency in final score")
     parser.add_argument("--beta", type=float, default=0.0, help="Reserved (distance metric removed).")
     parser.add_argument("--output-json", type=Path, help="Optional output JSON file")
     parser.add_argument("--debug-log", type=Path, help="Optional debug log JSON file with detailed metric traces")
+    parser.add_argument(
+        "--debug-sublogs-dir",
+        type=Path,
+        help="Optional directory for per-metric debug sublogs; if omitted and --debug-log is set, a default directory is created next to --debug-log.",
+    )
     return parser.parse_args()
 
 
@@ -59,6 +84,7 @@ def main() -> None:
         target_dir=args.target_dir,
         report_level=args.report_level,
         include_debug=bool(args.debug_log),
+        include_cross_document_consistency=bool(args.cross_document_consistency),
     )
 
     metric_summary = _extract_metric_summary(result)
@@ -67,8 +93,14 @@ def main() -> None:
     if args.output_json:
         args.output_json.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     if args.debug_log:
-        debug_payload = json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2)
+        debug_obj = result.get("debug", {})
+        debug_payload = json.dumps(debug_obj, ensure_ascii=False, indent=2)
         args.debug_log.write_text(debug_payload, encoding="utf-8")
+        sublogs_dir = args.debug_sublogs_dir
+        if sublogs_dir is None:
+            sublogs_dir = args.debug_log.parent / f"{args.debug_log.stem}_sublogs"
+        if isinstance(debug_obj, dict):
+            _write_debug_sublogs(debug_obj, sublogs_dir)
 
 
 if __name__ == "__main__":

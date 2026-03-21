@@ -14,9 +14,13 @@ from .data_model import (
     collapse_records_for_simple_mode,
 )
 from .io_utils import read_jsonl, read_tsv
-from .debug_report import build_accuracy_debug, build_consistency_debug
+from .debug_report import (
+    build_accuracy_debug,
+    build_consistency_debug,
+    build_cross_document_consistency_debug,
+)
 from .metrics_accuracy import compute_accuracy
-from .metrics_consistency import compute_consistency
+from .metrics_consistency import compute_consistency, compute_cross_document_consistency
 
 AVAILABLE_METRICS = {"accuracy", "consistency"}
 AVAILABLE_REPORT_LEVELS = {"document", "batch", "both"}
@@ -52,6 +56,7 @@ def _compute_metric_bundle(
     selected_metrics: List[str],
     alpha: float,
     beta: float,
+    include_cross_document_consistency: bool = False,
 ) -> Dict[str, Any]:
     result: Dict[str, Any] = {}
     precision = 0.0
@@ -64,6 +69,8 @@ def _compute_metric_bundle(
     if "consistency" in selected_metrics:
         consistency = compute_consistency(records)
         result["consistency"] = consistency
+        if include_cross_document_consistency:
+            result["cross_document_consistency"] = compute_cross_document_consistency(records)
 
     if selected_metrics == sorted(AVAILABLE_METRICS):
         result["final_score"] = precision - alpha * consistency
@@ -89,6 +96,7 @@ def run_evaluation(
     target_dir: Path | None = None,
     report_level: str = "batch",
     include_debug: bool = False,
+    include_cross_document_consistency: bool = False,
 ) -> Dict[str, Any]:
     selected_metrics = parse_metrics(metrics)
     report_level = report_level.lower()
@@ -118,6 +126,7 @@ def run_evaluation(
         "alpha": alpha,
         "beta": beta,
         "num_records": len(records),
+        "cross_document_consistency_enabled": include_cross_document_consistency,
     }
 
     if report_level in {"document", "both"}:
@@ -132,6 +141,7 @@ def run_evaluation(
                     selected_metrics=selected_metrics,
                     alpha=alpha,
                     beta=beta,
+                    include_cross_document_consistency=False,
                 ),
             }
             document_scores.append(per_doc)
@@ -145,12 +155,13 @@ def run_evaluation(
             selected_metrics=selected_metrics,
             alpha=alpha,
             beta=beta,
+            include_cross_document_consistency=include_cross_document_consistency,
         )
 
     if include_debug:
         batch_scores = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), Mapping) else {}
         score_summary: Dict[str, Any] = {}
-        for key in ("precision", "consistency", "final_score"):
+        for key in ("precision", "consistency", "cross_document_consistency", "final_score"):
             if key in batch_scores:
                 score_summary[key] = batch_scores[key]
 
@@ -168,6 +179,8 @@ def run_evaluation(
             debug_info["accuracy"] = build_accuracy_debug(records, gold_map)
         if "consistency" in selected_metrics:
             debug_info["consistency"] = build_consistency_debug(records)
+            if include_cross_document_consistency:
+                debug_info["cross_document_consistency"] = build_cross_document_consistency_debug(records)
         result["debug"] = debug_info
 
     return result
