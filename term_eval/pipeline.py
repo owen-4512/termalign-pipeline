@@ -73,7 +73,8 @@ def _compute_metric_bundle(
             result["cross_document_consistency"] = compute_cross_document_consistency(records)
 
     if selected_metrics == sorted(AVAILABLE_METRICS):
-        result["final_score"] = precision - alpha * consistency
+        weight = max(0.0, min(1.0, alpha))
+        result["final_score"] = (1.0 - weight) * precision + weight * consistency
 
     return result
 

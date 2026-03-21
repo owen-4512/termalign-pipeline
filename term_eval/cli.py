@@ -59,7 +59,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also compute batch-level cross-document consistency for terms that appear in >=2 source files.",
     )
-    parser.add_argument("--alpha", type=float, default=0.0, help="Hyperparameter for consistency in final score")
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.0,
+        help="Consistency weight λ for final_score=(1-λ)*precision+λ*consistency (clamped to [0,1]).",
+    )
     parser.add_argument("--beta", type=float, default=0.0, help="Reserved (distance metric removed).")
     parser.add_argument("--output-json", type=Path, help="Optional output JSON file")
     parser.add_argument("--debug-log", type=Path, help="Optional debug log JSON file with detailed metric traces")

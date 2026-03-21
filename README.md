@@ -21,14 +21,20 @@ term_eval/
 ## 支持指标
 
 - `accuracy`：计算 `precision`（先用提取出的中文术语对齐 gold；若术语不在 gold 中则跳过不计分。对齐后：若提取译法包含 gold 译法则得 1 分；若 gold 译法包含提取译法则按 token 比例得分，如 `risk assessment` 对 `cybersecurity risk assessment` 得 `2/3`）
-- `consistency`：计算术语译法熵均值（仅按出现分布统计，不考虑该译法是否准确）
-- `cross_document_consistency`（可选）：在 batch 场景下，对“出现在 2 个及以上文件中的同一术语”聚合其跨文件 occurrences 的译法分布并计算 entropy（该项通过 CLI 开关启用）
+- `consistency`：先计算术语译法熵，再做归一化并转成奖励分：`consistency = 1 - normalized_entropy`（范围 `[0,1]`，越高越好；仅按出现分布统计，不考虑该译法是否准确）
+- `cross_document_consistency`（可选）：在 batch 场景下，对“出现在 2 个及以上文件中的同一术语”聚合其跨文件 occurrences 的译法分布，按与 `consistency` 相同方法计算跨文件一致性分（该项通过 CLI 开关启用）
 
 当你选择 `all`（默认）时，额外输出：
 
 ```text
-final_score = precision - alpha * consistency
+λ = clip(alpha, 0, 1)
+final_score = (1 - λ) * precision + λ * consistency
 ```
+
+其中：
+- `precision` 越高越好；
+- `consistency` 越高越好（代表术语更一致）；
+- `alpha` 现在表示一致性权重 `λ`。
 
 ## 输入
 
@@ -152,8 +158,8 @@ python term_eval_pipeline.py \
 
 总 log `debug_metrics.json` 中会记录：
 - accuracy：每个术语 occurrence 的 gold 候选、单项得分（可为 0~1 的小数）
-- consistency：单文件（document 内）每个中文术语的译法计数、概率分布、entropy
-- cross_document_consistency：跨文件术语的译法计数、文件分布、entropy（单独分区，不混入单文件 consistency）
+- consistency：单文件（document 内）每个中文术语的译法计数、概率分布、`entropy`、`normalized_entropy`、`consistency_score`
+- cross_document_consistency：跨文件术语的译法计数、文件分布、`entropy`、`normalized_entropy`、`consistency_score`（单独分区，不混入单文件 consistency）
 - 额外元信息：record 数、source term 数、所选 metrics 等
 
 ## 输出

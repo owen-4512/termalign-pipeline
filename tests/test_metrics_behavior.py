@@ -220,8 +220,9 @@ class TestMetricsBehavior(unittest.TestCase):
         ]
 
         consistency = compute_consistency(records)
-        # H(2/3,1/3)=~0.9182958341, 与术语B(0)平均 => ~0.459147917
-        self.assertAlmostEqual(consistency, 0.459147917, places=6)
+        # 术语A: H=0.918..., normalized=0.918..., score=1-0.918...=0.081704...
+        # 术语B: score=1.0; 均值 => 0.540852...
+        self.assertAlmostEqual(consistency, 0.540852083, places=6)
 
     def test_cross_document_consistency_only_counts_terms_in_multiple_files(self):
         records = [
@@ -240,9 +241,9 @@ class TestMetricsBehavior(unittest.TestCase):
                 },
             },
         ]
-        # 只有术语A跨文件，分布为 X:3, Y:1 => H = -0.75log2(0.75)-0.25log2(0.25)=0.811278...
+        # 只有术语A跨文件，H=0.811278..., normalized=0.811278..., score=0.188721...
         score = compute_cross_document_consistency(records)
-        self.assertAlmostEqual(score, 0.811278124459, places=6)
+        self.assertAlmostEqual(score, 0.188721875541, places=6)
 
 
 if __name__ == "__main__":

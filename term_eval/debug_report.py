@@ -98,12 +98,16 @@ def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, A
             total = sum(counts.values())
 
             entropy = 0.0
+            normalized_entropy = 0.0
             probs = {}
             if total > 0 and len(counts) > 1:
                 for k, c in counts.items():
                     p = c / total
                     probs[k] = p
                     entropy -= p * math.log2(p)
+                max_entropy = math.log2(len(counts))
+                if max_entropy > 0.0:
+                    normalized_entropy = entropy / max_entropy
 
             entropies.append(entropy)
             details.append(
@@ -115,13 +119,23 @@ def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, A
                     "variant_counts_normalized": dict(counts),
                     "variant_probabilities": probs,
                     "entropy": entropy,
+                    "normalized_entropy": normalized_entropy,
+                    "consistency_score": 1.0 - normalized_entropy,
                 }
             )
 
+    mean_entropy = (sum(entropies) / len(entropies)) if entropies else 0.0
+    mean_normalized_entropy = (
+        sum(d["normalized_entropy"] for d in details) / len(details)
+        if details
+        else 0.0
+    )
     return {
         "summary": {
             "num_terms": len(entropies),
-            "mean_entropy": (sum(entropies) / len(entropies)) if entropies else 0.0,
+            "mean_entropy": mean_entropy,
+            "mean_normalized_entropy": mean_normalized_entropy,
+            "consistency_score": 1.0 - mean_normalized_entropy,
         },
         "term_details": details,
     }
@@ -164,11 +178,15 @@ def build_cross_document_consistency_debug(records: Iterable[Mapping[str, Any]])
         total = sum(counts.values())
         probs: Dict[str, float] = {}
         entropy = 0.0
+        normalized_entropy = 0.0
         if total > 0 and len(counts) > 1:
             for k, c in counts.items():
                 p = c / total
                 probs[k] = p
                 entropy -= p * math.log2(p)
+            max_entropy = math.log2(len(counts))
+            if max_entropy > 0.0:
+                normalized_entropy = entropy / max_entropy
 
         entropies.append(entropy)
         details.append(
@@ -185,13 +203,23 @@ def build_cross_document_consistency_debug(records: Iterable[Mapping[str, Any]])
                     for doc in docs
                 },
                 "entropy": entropy,
+                "normalized_entropy": normalized_entropy,
+                "consistency_score": 1.0 - normalized_entropy,
             }
         )
 
+    mean_entropy = (sum(entropies) / len(entropies)) if entropies else 0.0
+    mean_normalized_entropy = (
+        sum(d["normalized_entropy"] for d in details) / len(details)
+        if details
+        else 0.0
+    )
     return {
         "summary": {
             "num_cross_document_terms": len(entropies),
-            "mean_entropy": (sum(entropies) / len(entropies)) if entropies else 0.0,
+            "mean_entropy": mean_entropy,
+            "mean_normalized_entropy": mean_normalized_entropy,
+            "consistency_score": 1.0 - mean_normalized_entropy,
         },
         "term_details": details,
     }

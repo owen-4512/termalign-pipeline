@@ -1,7 +1,11 @@
-"""Consistency metric based on entropy of translation variants.
+"""Consistency metrics derived from normalized entropy of translation variants.
 
-Consistency is computed from occurrence distribution only and is independent
-of whether variants are accurate against the gold dictionary.
+We compute entropy from occurrence distribution only (independent of accuracy),
+normalize it into [0,1], and then convert to a reward-style consistency score:
+
+    consistency_score = 1 - normalized_entropy
+
+Higher score means more consistent terminology usage.
 """
 
 from __future__ import annotations
@@ -34,8 +38,20 @@ def _entropy_of_normalized_variants(normalized: List[str]) -> float:
     return entropy
 
 
+def _normalized_entropy_of_normalized_variants(normalized: List[str]) -> float:
+    counts = Counter(normalized)
+    k = len(counts)
+    if k <= 1:
+        return 0.0
+    entropy = _entropy_of_normalized_variants(normalized)
+    max_entropy = math.log2(k)
+    if max_entropy <= 0.0:
+        return 0.0
+    return entropy / max_entropy
+
+
 def compute_consistency(records: Iterable[Mapping[str, Any]]) -> float:
-    entropies: List[float] = []
+    scores: List[float] = []
     for record in records:
         extracted_terms = record.get("extracted_terms", {})
         if not isinstance(extracted_terms, Mapping):
@@ -44,15 +60,17 @@ def compute_consistency(records: Iterable[Mapping[str, Any]]) -> float:
         for _src_term, variants in extracted_terms.items():
             if not isinstance(variants, Sequence) or isinstance(variants, (str, bytes)):
                 variants = [str(variants)]
-            entropies.append(entropy_of_variants([str(v) for v in variants]))
+            normalized = [normalize(str(v)) for v in variants if normalize(str(v))]
+            norm_entropy = _normalized_entropy_of_normalized_variants(normalized)
+            scores.append(1.0 - norm_entropy)
 
-    if not entropies:
+    if not scores:
         return 0.0
-    return sum(entropies) / len(entropies)
+    return sum(scores) / len(scores)
 
 
 def compute_cross_document_consistency(records: Iterable[Mapping[str, Any]]) -> float:
-    """Mean entropy for terms that appear in two or more source files."""
+    """Mean consistency score for terms that appear in two or more source files."""
     term_variants: dict[str, list[str]] = defaultdict(list)
     term_docs: dict[str, set[str]] = defaultdict(set)
 
@@ -77,12 +95,13 @@ def compute_cross_document_consistency(records: Iterable[Mapping[str, Any]]) -> 
             term_docs[norm_term].add(source_file)
             term_variants[norm_term].extend(norm_variants)
 
-    entropies: list[float] = []
+    scores: list[float] = []
     for term, docs in term_docs.items():
         if len(docs) < 2:
             continue
-        entropies.append(_entropy_of_normalized_variants(term_variants.get(term, [])))
+        norm_entropy = _normalized_entropy_of_normalized_variants(term_variants.get(term, []))
+        scores.append(1.0 - norm_entropy)
 
-    if not entropies:
+    if not scores:
         return 0.0
-    return sum(entropies) / len(entropies)
+    return sum(scores) / len(scores)
