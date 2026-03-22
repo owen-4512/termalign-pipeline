@@ -50,7 +50,7 @@ def _normalized_entropy_of_normalized_variants(normalized: List[str]) -> float:
     return entropy / max_entropy
 
 
-def compute_consistency(records: Iterable[Mapping[str, Any]]) -> float:
+def _compute_single_document_consistency(records: Iterable[Mapping[str, Any]]) -> float:
     scores: List[float] = []
     for record in records:
         extracted_terms = record.get("extracted_terms", {})
@@ -67,6 +67,23 @@ def compute_consistency(records: Iterable[Mapping[str, Any]]) -> float:
     if not scores:
         return 0.0
     return sum(scores) / len(scores)
+
+
+def compute_consistency(records: Iterable[Mapping[str, Any]]) -> float:
+    """Unified consistency score.
+
+    - If there is only one source document, use single-document consistency.
+    - If there are multiple source documents, use cross-document consistency.
+    """
+    records_list = list(records)
+    doc_ids = {
+        str(rec.get("source_file", "__default__"))
+        for rec in records_list
+        if isinstance(rec.get("extracted_terms", {}), Mapping)
+    }
+    if len(doc_ids) <= 1:
+        return _compute_single_document_consistency(records_list)
+    return compute_cross_document_consistency(records_list)
 
 
 def compute_cross_document_consistency(records: Iterable[Mapping[str, Any]]) -> float:
@@ -105,3 +122,17 @@ def compute_cross_document_consistency(records: Iterable[Mapping[str, Any]]) -> 
     if not scores:
         return 0.0
     return sum(scores) / len(scores)
+
+
+def compute_per_file_consistency(records: Iterable[Mapping[str, Any]]) -> dict[str, float]:
+    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    for rec in records:
+        if not isinstance(rec.get("extracted_terms", {}), Mapping):
+            continue
+        source_file = str(rec.get("source_file", "__default__"))
+        grouped[source_file].append(rec)
+
+    return {
+        source_file: _compute_single_document_consistency(file_records)
+        for source_file, file_records in grouped.items()
+    }

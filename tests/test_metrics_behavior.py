@@ -245,6 +245,21 @@ class TestMetricsBehavior(unittest.TestCase):
         score = compute_cross_document_consistency(records)
         self.assertAlmostEqual(score, 0.188721875541, places=6)
 
+    def test_consistency_auto_switches_to_cross_document_for_multi_file_input(self):
+        records = [
+            {
+                "source_file": "s1.txt",
+                "extracted_terms": {"术语A": ["Term X", "Term Y"]},
+            },
+            {
+                "source_file": "s2.txt",
+                "extracted_terms": {"术语A": ["Term X", "Term X"]},
+            },
+        ]
+        auto_score = compute_consistency(records)
+        cross_score = compute_cross_document_consistency(records)
+        self.assertAlmostEqual(auto_score, cross_score, places=9)
+
 
 if __name__ == "__main__":
     unittest.main()

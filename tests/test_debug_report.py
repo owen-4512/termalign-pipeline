@@ -130,7 +130,7 @@ class TestDebugReport(unittest.TestCase):
             self.assertEqual(item["best_gold_tokens_canonical"], ["bank", "branch", "service"])
             self.assertAlmostEqual(item["score"], 1.0)
 
-    def test_cross_document_consistency_debug_is_separate_section(self):
+    def test_multi_document_consistency_debug_includes_per_file_summary(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             d = Path(tmpdir)
             (d / "align.tsv").write_text(
@@ -157,11 +157,12 @@ class TestDebugReport(unittest.TestCase):
                 include_cross_document_consistency=True,
             )
 
-            self.assertIn("cross_document_consistency", result["batch_score"])
+            self.assertIn("consistency", result["batch_score"])
             self.assertIn("consistency", result["debug"])
-            self.assertIn("cross_document_consistency", result["debug"])
-            self.assertIn("summary", result["debug"]["cross_document_consistency"])
-            self.assertIn("term_details", result["debug"]["cross_document_consistency"])
+            self.assertEqual(result["debug"]["consistency"]["summary"]["consistency_mode"], "cross_document")
+            self.assertIn("per_file_consistency_scores", result["debug"]["consistency"]["summary"])
+            self.assertIn("s1.txt", result["debug"]["consistency"]["summary"]["per_file_consistency_scores"])
+            self.assertIn("s2.txt", result["debug"]["consistency"]["summary"]["per_file_consistency_scores"])
 
 
 if __name__ == "__main__":

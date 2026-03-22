@@ -14,7 +14,7 @@ def _extract_metric_summary(result: Dict[str, Any]) -> Dict[str, Any]:
     summary: Dict[str, Any] = {}
     batch_score = result.get("batch_score")
     if isinstance(batch_score, dict):
-        for key in ("precision", "consistency", "cross_document_consistency", "final_score"):
+        for key in ("precision", "consistency", "final_score"):
             if key in batch_score:
                 summary[key] = batch_score[key]
     return summary
@@ -24,8 +24,7 @@ def _write_debug_sublogs(debug: Dict[str, Any], output_dir: Path) -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
     mapping = {
         "accuracy": "accuracy.json",
-        "consistency": "consistency_document.json",
-        "cross_document_consistency": "cross_document_consistency.json",
+        "consistency": "consistency.json",
     }
     for key, filename in mapping.items():
         if key in debug:
@@ -57,7 +56,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--cross-document-consistency",
         action="store_true",
-        help="Also compute batch-level cross-document consistency for terms that appear in >=2 source files.",
+        help="Deprecated: consistency mode is now selected automatically (single-document vs cross-document).",
     )
     parser.add_argument(
         "--alpha",

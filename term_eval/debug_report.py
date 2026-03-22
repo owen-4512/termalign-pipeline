@@ -8,6 +8,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 from .data_model import DistanceInputs
 from .metrics_accuracy import compute_occurrence_best_detail
+from .metrics_consistency import compute_per_file_consistency
 from .metrics_distance import shortest_distance, token_positions_by_variant
 from .normalization import normalize
 
@@ -79,7 +80,7 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
     }
 
 
-def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+def _build_single_document_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
     details: List[Dict[str, Any]] = []
     entropies: List[float] = []
 
@@ -136,6 +137,7 @@ def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, A
             "mean_entropy": mean_entropy,
             "mean_normalized_entropy": mean_normalized_entropy,
             "consistency_score": 1.0 - mean_normalized_entropy,
+            "consistency_mode": "single_document",
         },
         "term_details": details,
     }
@@ -220,9 +222,27 @@ def build_cross_document_consistency_debug(records: Iterable[Mapping[str, Any]])
             "mean_entropy": mean_entropy,
             "mean_normalized_entropy": mean_normalized_entropy,
             "consistency_score": 1.0 - mean_normalized_entropy,
+            "consistency_mode": "cross_document",
         },
         "term_details": details,
     }
+
+
+def build_consistency_debug(records: Iterable[Mapping[str, Any]]) -> Dict[str, Any]:
+    records_list = list(records)
+    doc_ids = {
+        str(rec.get("source_file", "__default__"))
+        for rec in records_list
+        if isinstance(rec.get("extracted_terms", {}), Mapping)
+    }
+    if len(doc_ids) <= 1:
+        return _build_single_document_consistency_debug(records_list)
+
+    cross_debug = build_cross_document_consistency_debug(records_list)
+    summary = dict(cross_debug.get("summary", {}))
+    summary["per_file_consistency_scores"] = compute_per_file_consistency(records_list)
+    cross_debug["summary"] = summary
+    return cross_debug
 
 
 def build_distance_debug(
