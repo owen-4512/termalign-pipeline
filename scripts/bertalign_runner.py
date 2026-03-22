@@ -20,6 +20,17 @@ def normalize_line(line: str) -> str:
     return line.strip()
 
 
+def canonicalize_newlines(text: str) -> str:
+    """
+    Normalize real newlines and also handle escaped '\\n' content
+    (common when text is copied from JSON / logs).
+    """
+    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    if "\\n" in text and text.count("\n") < 3:
+        text = text.replace("\\n", "\n")
+    return text
+
+
 def is_heading_like(line: str) -> bool:
     if not line:
         return False
@@ -29,48 +40,61 @@ def is_heading_like(line: str) -> bool:
 
 
 def split_zh_text(text: str):
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = canonicalize_newlines(text)
     segments = []
 
-    for raw in text.split("\n"):
-        line = normalize_line(raw)
-        if not line:
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
+    for para in paragraphs:
+        lines = [normalize_line(x) for x in para.split("\n") if normalize_line(x)]
+        if not lines:
             continue
 
-        # keep bullet as one unit to avoid too many tiny fragments
-        if line.startswith("-"):
-            segments.append(line)
+        # Merge heading-only paragraphs into one heading segment
+        if all(is_heading_like(x) for x in lines):
+            segments.append(f"<H>{' / '.join(lines)}")
             continue
 
-        if is_heading_like(line):
-            segments.append(f"<H>{line}")
-            continue
+        for line in lines:
+            # keep bullet as one unit to avoid too many tiny fragments
+            if line.startswith("-"):
+                segments.append(line)
+                continue
 
-        parts = [p.strip() for p in ZH_SENT_BOUNDARY.split(line) if p.strip()]
-        segments.extend(parts)
+            if is_heading_like(line):
+                segments.append(f"<H>{line}")
+                continue
+
+            parts = [p.strip() for p in ZH_SENT_BOUNDARY.split(line) if p.strip()]
+            segments.extend(parts)
 
     return segments
 
 
 def split_en_text(text: str):
-    text = text.replace("\r\n", "\n").replace("\r", "\n")
+    text = canonicalize_newlines(text)
     segments = []
 
-    for raw in text.split("\n"):
-        line = normalize_line(raw)
-        if not line:
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", text) if p.strip()]
+    for para in paragraphs:
+        lines = [normalize_line(x) for x in para.split("\n") if normalize_line(x)]
+        if not lines:
             continue
 
-        if line.startswith("-"):
-            segments.append(line)
+        if all(is_heading_like(x) for x in lines):
+            segments.append(f"<H>{' / '.join(lines)}")
             continue
 
-        if is_heading_like(line):
-            segments.append(f"<H>{line}")
-            continue
+        for line in lines:
+            if line.startswith("-"):
+                segments.append(line)
+                continue
 
-        parts = [p.strip() for p in EN_SENT_BOUNDARY.split(line) if p.strip()]
-        segments.extend(parts)
+            if is_heading_like(line):
+                segments.append(f"<H>{line}")
+                continue
+
+            parts = [p.strip() for p in EN_SENT_BOUNDARY.split(line) if p.strip()]
+            segments.extend(parts)
 
     return segments
 
