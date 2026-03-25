@@ -17,6 +17,12 @@ def build_parser() -> argparse.ArgumentParser:
         default="multi-embedding",
         help="Embedding model for alignment (default: ./multi-embedding)",
     )
+    parser.add_argument(
+        "--similarity-threshold",
+        type=float,
+        default=0.5,
+        help="Threshold for high-confidence alignments (default: 0.5)",
+    )
     parser.add_argument("--output-dir", required=True, help="Directory for outputs")
     parser.add_argument("--skip-bert", action="store_true", help="Skip BERT extraction")
     return parser
@@ -33,6 +39,7 @@ def main() -> None:
         bert_model_zh=args.bert_model_zh,
         bert_model_en=args.bert_model_en,
         embed_model=args.embed_model,
+        similarity_threshold=args.similarity_threshold,
         output_dir=args.output_dir,
         skip_bert=args.skip_bert,
     )

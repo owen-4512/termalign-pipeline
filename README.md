@@ -133,6 +133,11 @@ python -m termalign.cli [OPTIONS]
   - Type: flag (no value)
   - Meaning: Disable all BERT extraction (dictionary-only extraction).
 
+- `--similarity-threshold`
+  - Type: `float`
+  - Default: `0.5`
+  - Meaning: Threshold used to create high-confidence alignment files.
+
 ---
 
 ## Usage Examples
@@ -147,6 +152,7 @@ python -m termalign.cli \
   --bert-model-zh model_zh_term \
   --bert-model-en model_en_term \
   --embed-model multi-embedding \
+  --similarity-threshold 0.5 \
   --output-dir outputs
 ```
 
@@ -191,7 +197,7 @@ python -m termalign.cli \
 - `terms_zh.tsv`
 - `terms_en.tsv`
 - `alignments.tsv`
-- `alignments_high_conf.tsv` (similarity > 0.5)
+- `alignments_high_conf.tsv` (similarity > `--similarity-threshold`)
 
 ## Batch input (folder)
 For each file `<name>.tsv`:
@@ -282,7 +288,7 @@ Implications:
 ### 6) High-Confidence Alignment File
 After normal alignment rows are generated:
 - `alignments.tsv` contains all alignment rows.
-- `alignments_high_conf.tsv` keeps rows with `similarity > 0.5`.
+- `alignments_high_conf.tsv` keeps rows with `similarity > similarity_threshold` (CLI argument).
 
 In batch mode, both per-file and merged `all_*` versions are produced.
 
@@ -295,7 +301,7 @@ In batch mode, both per-file and merged `all_*` versions are produced.
 ### 8) Known Behavioral Characteristics
 - If a zh sentence has multiple near-synonymous en candidates, only the top one is kept per zh term.
 - If you need one-to-one bipartite matching, this would require replacing the selection rule.
-- Similarity threshold (`0.5`) is practical but task-dependent; tune it for your domain.
+- Similarity threshold (default `0.5`, configurable via `--similarity-threshold`) is practical but task-dependent; tune it for your domain.
 
 ### 9) Practical Interpretation of Similarity
 Typical intuition (not strict rules):

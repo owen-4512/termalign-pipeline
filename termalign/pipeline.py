@@ -147,6 +147,7 @@ def _process_single_input(
     converter_t2s: OpenCC,
     converter_s2t: OpenCC,
     skip_bert: bool,
+    similarity_threshold: float,
 ) -> tuple[list[dict], list[dict], list[dict], list[dict]]:
     pairs = read_sentence_pairs(input_path)
     source_file = Path(input_path).name
@@ -196,7 +197,7 @@ def _process_single_input(
         alignments.extend(build_alignment(zh_group, en_group, embedder))
 
     alignment_rows = _alignment_rows(alignments, converter_s2t, source_file)
-    high_conf_rows = [row for row in alignment_rows if float(row["similarity"]) > 0.5]
+    high_conf_rows = [row for row in alignment_rows if float(row["similarity"]) > similarity_threshold]
     return zh_rows, en_rows, alignment_rows, high_conf_rows
 
 
@@ -216,6 +217,7 @@ def run_pipeline(
     bert_model_zh: str | None,
     bert_model_en: str | None,
     embed_model: str,
+    similarity_threshold: float,
     output_dir: str | Path,
     skip_bert: bool = False,
 ) -> None:
@@ -253,6 +255,7 @@ def run_pipeline(
             converter_t2s=converter_t2s,
             converter_s2t=converter_s2t,
             skip_bert=skip_bert,
+            similarity_threshold=similarity_threshold,
         )
 
         all_zh_rows.extend(zh_rows)
