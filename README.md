@@ -136,7 +136,8 @@ python -m termalign.cli [OPTIONS]
 - `--similarity-threshold`
   - Type: `float`
   - Default: `0.5`
-  - Meaning: Threshold used to create high-confidence alignment files.
+  - Meaning: Threshold for **alignment similarity** (cosine score in `alignments.tsv`), used to create `alignments_high_conf.tsv`.
+  - Scope: Applies to zh-en alignment rows, **not** to BERT extraction confidence.
 
 ---
 
@@ -345,3 +346,10 @@ If you mistype a model path (`mode` vs `model_en`), loading fails. Check:
 
 ### 3) Why confidence is blank for some terms?
 Those are dictionary hits (`source=dict`), not BERT hits.
+
+
+### 4) Do I need to pass a confidence argument?
+No (current behavior): there is **no CLI argument for confidence threshold**.
+- `confidence` is computed automatically for BERT-extracted terms and written to output.
+- Dictionary terms have blank confidence.
+- If you need confidence-based filtering, a future option like `--confidence-threshold` can be added.
