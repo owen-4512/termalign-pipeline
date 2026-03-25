@@ -225,6 +225,86 @@ Merged outputs across all input files:
 
 ---
 
+
+
+## Term Alignment: End-to-End Mechanics
+
+This section explains exactly how zh-en term alignment is produced in this project.
+
+### 1) Alignment Scope (Very Important)
+Alignment is **sentence-pair bounded**:
+- For each input row, only terms extracted from that row's `src_text` and `tgt_text` are eligible to align.
+- Terms from different rows are never aligned to each other.
+
+This avoids false cross-sentence mappings and preserves translation locality.
+
+### 2) What Gets Aligned
+For each input sentence pair:
+1. Chinese candidate terms are extracted (dict + optional BERT) and filtered.
+2. English candidate terms are extracted (dict + optional BERT) and filtered.
+3. If either side has no terms, that pair contributes no alignment rows.
+4. Otherwise, the pair enters embedding-based matching.
+
+### 3) Embedding Construction
+For each candidate term string:
+1. The alignment tokenizer tokenizes the term text.
+2. The alignment model outputs token embeddings (`last_hidden_state`).
+3. Mean pooling with attention mask is applied:
+   - masked sum of token vectors / count of non-padding tokens.
+4. The result is one dense vector per term.
+
+So each zh term and each en term becomes a single vector in the same embedding space.
+
+### 4) Similarity Computation
+Let:
+- `Z = [z1, z2, ..., zm]` be zh term embeddings
+- `E = [e1, e2, ..., en]` be en term embeddings
+
+Then:
+1. L2-normalize each vector:
+   - `zi_hat = zi / ||zi||`
+   - `ej_hat = ej / ||ej||`
+2. Build similarity matrix `S` by dot product:
+   - `S[i, j] = zi_hat · ej_hat`
+
+Because vectors are normalized, this dot product equals cosine similarity.
+
+### 5) Matching Rule Used
+Current rule is **best-en-for-each-zh**:
+- For each zh term `i`, pick `j* = argmax_j S[i, j]`.
+- Emit one alignment row `(zh_i, en_j*, S[i, j*])`.
+
+Implications:
+- A single en term can be selected by multiple zh terms (many-to-one allowed).
+- This is not global one-to-one assignment (not Hungarian matching).
+- It is simple, deterministic, and fast.
+
+### 6) High-Confidence Alignment File
+After normal alignment rows are generated:
+- `alignments.tsv` contains all alignment rows.
+- `alignments_high_conf.tsv` keeps rows with `similarity > 0.5`.
+
+In batch mode, both per-file and merged `all_*` versions are produced.
+
+### 7) Why This Design Works for Terminology
+- Sentence-pair restriction injects strong translation context.
+- Dictionary-first extraction ensures known terms are prioritized.
+- BERT extraction adds recall for unseen terms.
+- Embedding similarity provides cross-lingual semantic matching even when forms differ.
+
+### 8) Known Behavioral Characteristics
+- If a zh sentence has multiple near-synonymous en candidates, only the top one is kept per zh term.
+- If you need one-to-one bipartite matching, this would require replacing the selection rule.
+- Similarity threshold (`0.5`) is practical but task-dependent; tune it for your domain.
+
+### 9) Practical Interpretation of Similarity
+Typical intuition (not strict rules):
+- `> 0.75`: often strong cross-lingual match.
+- `0.5 ~ 0.75`: plausible but should be reviewed for noisy sentences.
+- `< 0.5`: weak or mismatched in many domains.
+
+Always calibrate with a labeled validation sample from your own corpus.
+
 ## Important Processing Rules
 - Chinese input is converted Traditional → Simplified for extraction, then converted back to Traditional in Chinese outputs.
 - English preprocessing replaces escaped/newline tokens with spaces and collapses whitespace.
