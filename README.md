@@ -43,6 +43,46 @@ credit loss
 
 ---
 
+
+## Publish & Reuse Your Fine-tuned Models in This Repo
+
+If you want other users to clone the repository and run directly with your fine-tuned models,
+store model folders in the project root (or a fixed relative path), for example:
+
+```text
+termalign-pipeline/
+  model_zh_term/
+  model_en_term/
+  multi-embedding/
+  termalign/
+  README.md
+  requirements.txt
+```
+
+Recommended command (using local bundled models):
+
+```bash
+python -m termalign.cli \
+  --input data/input.tsv \
+  --dict-zh dict/proper_terms_sc.txt \
+  --dict-en dict/proper_terms_en.txt \
+  --bert-model-zh model_zh_term \
+  --bert-model-en model_en_term \
+  --embed-model multi-embedding \
+  --output-dir outputs
+```
+
+### Important for GitHub Upload
+Large model files should be tracked with Git LFS, otherwise cloning may fail or files may be missing.
+
+```bash
+git lfs install
+git lfs track "*.bin" "*.pt" "*.ckpt" "*.safetensors" "tokenizer.json"
+git add .gitattributes
+```
+
+Then add model folders and push as usual.
+
 ## BERT Models: What They Do
 You can provide one model for Chinese and one for English:
 
@@ -330,6 +370,8 @@ python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+`safetensors` and `sentencepiece` are included in requirements to improve compatibility when loading locally bundled fine-tuned models/tokenizers.
 
 ---
 
