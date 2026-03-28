@@ -1,0 +1,142 @@
+# TermAlign Pipeline (Prefect)
+
+用于“文件术语翻译打分”的三阶段 pipeline：
+
+1. `bertalign`：句段对齐（支持外部 bertalign 命令，默认提供可运行的回退逐行对齐）
+2. `termalign`：术语抽取 + 术语配对（支持 Hugging Face 模型或 API）
+3. `evaluation`：基于自定义词典进行准确性、一致性和熵统计（支持按置信度加权）
+
+---
+
+## 安装
+
+### 1) 安装总依赖（整条 pipeline 可运行）
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2) 安装子项目依赖（每个步骤可单独运行）
+
+```bash
+pip install -r bertalign_step/requirements.txt
+pip install -r termalign_step/requirements.txt
+pip install -r evaluation_step/requirements.txt
+```
+
+---
+
+## 数据格式
+
+### 输入文件
+- `source_file`: 源语言文本（每行一个句段）
+- `target_file`: 目标语言文本（每行一个句段）
+
+### 词典文件（JSON）
+
+```json
+{
+  "equity": ["股权", "权益"],
+  "bond": ["债券"]
+}
+```
+
+---
+
+## 单独运行各步骤
+
+### A. bertalign 步骤
+
+```bash
+python bertalign_step/run_bertalign.py \
+  --source-file data/source.txt \
+  --target-file data/target.txt \
+  --output-file outputs/bertalign.jsonl \
+  --default-confidence 0.85
+```
+
+如果你希望强制使用官方 bertalign，可传入 `--external-command`，命令中支持占位符：`{src}` `{tgt}` `{out}`。
+
+```bash
+python bertalign_step/run_bertalign.py \
+  --source-file data/source.txt \
+  --target-file data/target.txt \
+  --output-file outputs/bertalign.jsonl \
+  --external-command "python your_bertalign_runner.py --src {src} --tgt {tgt} --out {out}"
+```
+
+### B. termalign 步骤（模型模式）
+
+```bash
+python termalign_step/run_termalign.py \
+  --bertalign-output outputs/bertalign.jsonl \
+  --output-file outputs/termalign.jsonl \
+  --extraction-mode model \
+  --aligner-model owen4512/minilm-finance-term-aligner \
+  --zh-extractor-model owen4512/bert-base-chinese-finance-term-extractor \
+  --en-extractor-model owen4512/bert-base-cased-finance-term-extractor \
+  --min-term-confidence 0.5 \
+  --min-pair-confidence 0.5
+```
+
+### C. termalign 步骤（API 模式）
+
+```bash
+python termalign_step/run_termalign.py \
+  --bertalign-output outputs/bertalign.jsonl \
+  --output-file outputs/termalign.jsonl \
+  --extraction-mode api \
+  --api-endpoint https://your-api/term-extract \
+  --api-key YOUR_KEY
+```
+
+### D. evaluation 步骤
+
+```bash
+python evaluation_step/evaluate_terms.py \
+  --termalign-output outputs/termalign.jsonl \
+  --dictionary-path data/term_dict.json \
+  --output-file outputs/evaluation.json \
+  --min-confidence 0.4 \
+  --smoothing-alpha 0.1 \
+  --normalize-entropy
+```
+
+核心加权逻辑：
+- 对每个翻译变体 `v`，有效次数 `effective_count(v) = count(v) * confidence(v)`
+- 默认当 `count_field` 不提供时，`count(v)=1`，等价于“每次出现按置信度计权”
+
+---
+
+## Prefect 总流程运行
+
+```bash
+python pipeline/prefect_flow.py \
+  --source-file data/source.txt \
+  --target-file data/target.txt \
+  --dictionary-path data/term_dict.json \
+  --bertalign-output outputs/bertalign.jsonl \
+  --termalign-output outputs/termalign.jsonl \
+  --evaluation-output outputs/evaluation.json \
+  --extraction-mode model \
+  --min-term-confidence 0.5 \
+  --min-pair-confidence 0.5 \
+  --eval-min-confidence 0.4 \
+  --eval-smoothing-alpha 0.1 \
+  --eval-normalize-entropy
+```
+
+---
+
+## 可调参数（重点）
+
+- 路径参数：输入、各阶段输出路径
+- 术语抽取方式：`--extraction-mode model|api`
+- 术语抽取阈值：`--min-term-confidence`
+- 术语配对阈值：`--min-pair-confidence`
+- 统计阈值：`--eval-min-confidence`
+- 加权字段：`--eval-confidence-field`、`--eval-count-field`
+- 熵参数：`--eval-entropy-base`、`--eval-normalize-entropy`
+- 可选平滑：`--eval-smoothing-alpha`
+- 统计截断：`--eval-top-k-variants`
+

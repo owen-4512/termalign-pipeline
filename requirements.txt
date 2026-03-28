@@ -1,0 +1,4 @@
+-r bertalign_step/requirements.txt
+-r termalign_step/requirements.txt
+-r evaluation_step/requirements.txt
+prefect>=3.1.0
