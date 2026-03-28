@@ -179,6 +179,8 @@ python termalign_step/run_termalign.py \
 
 ### D. evaluation 步骤
 
+`evaluation_step/evaluate_terms.py` 现已对接 evaluation 全量脚本（`evaluation_pipeline/*`），会自动把当前 pipeline 的输入转成 evaluation 所需格式后计算 `accuracy + consistency + final_score`（并输出 debug 信息）。
+
 ```bash
 python evaluation_step/evaluate_terms.py \
   --termalign-output data/Task2/termalign.jsonl \
