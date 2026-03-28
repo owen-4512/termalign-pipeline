@@ -197,8 +197,9 @@ python evaluation_step/evaluate_terms.py \
 ```
 
 核心加权逻辑：
-- 对每个翻译变体 `v`，有效次数 `effective_count(v) = count(v) * confidence(v)`
-- 默认当 `count_field` 不提供时，`count(v)=1`，等价于“每次出现按置信度计权”
+- 默认从 termalign TSV 中读取 `similarity`（若缺失则回退到 `weighted_confidence / model_pair_confidence / confidence / 1.0`）作为每次对齐的权重
+- accuracy：按权重计算加权平均（`weighted_score_sum / total_effective_weight`），低 similarity 对 precision 影响更小
+- consistency：按权重聚合每个译法的有效次数，再计算比例与熵（`consistency = 1 - normalized_entropy`）
 
 ---
 

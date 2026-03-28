@@ -22,6 +22,7 @@ def _jsonl_to_termalign_tsv(termalign_jsonl: Path, out_tsv: Path) -> Path:
                         "source_file": obj.get("source_file", "__default__"),
                         "zh_term": obj.get("source_term", ""),
                         "en_term": obj.get("target_term", ""),
+                        "similarity": obj.get("weighted_confidence", obj.get("model_pair_confidence", 1.0)),
                     }
                 )
     out_tsv.parent.mkdir(parents=True, exist_ok=True)

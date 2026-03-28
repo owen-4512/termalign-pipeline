@@ -73,9 +73,10 @@ def compute_occurrence_best_detail(predicted: str, references: set[str]) -> Mapp
 
 
 def compute_accuracy(records: Iterable[Mapping[str, Any]], gold_map: Mapping[str, set[str]]) -> float:
-    score_sum, total = 0.0, 0
+    score_sum, total_weight = 0.0, 0.0
     for record in records:
         extracted_terms = record.get("extracted_terms", {})
+        extracted_weights = record.get("extracted_weights", {})
         if not isinstance(extracted_terms, Mapping):
             continue
         for src_term, variants in extracted_terms.items():
@@ -84,8 +85,17 @@ def compute_accuracy(records: Iterable[Mapping[str, Any]], gold_map: Mapping[str
                 continue
             if not isinstance(variants, Sequence) or isinstance(variants, (str, bytes)):
                 variants = [str(variants)]
-            norm_variants = [normalize(str(v)) for v in variants if normalize(str(v))]
-            total += len(norm_variants)
-            for variant in norm_variants:
-                score_sum += float(compute_occurrence_best_detail(variant, refs)["score"])
-    return (score_sum / total) if total else 0.0
+            weights = extracted_weights.get(src_term, []) if isinstance(extracted_weights, Mapping) else []
+            for idx, raw_variant in enumerate(variants):
+                variant = normalize(str(raw_variant))
+                if not variant:
+                    continue
+                weight = 1.0
+                if isinstance(weights, Sequence) and not isinstance(weights, (str, bytes)) and idx < len(weights):
+                    try:
+                        weight = max(float(weights[idx]), 0.0)
+                    except (TypeError, ValueError):
+                        weight = 1.0
+                total_weight += weight
+                score_sum += float(compute_occurrence_best_detail(variant, refs)["score"]) * weight
+    return (score_sum / total_weight) if total_weight > 0 else 0.0
