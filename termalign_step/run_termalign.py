@@ -41,6 +41,44 @@ def _jsonl_to_tsv(input_jsonl: Path, output_tsv: Path) -> str:
     return str(output_tsv)
 
 
+def _prepare_termalign_input(input_path: Path, tmpdir_path: Path) -> Path:
+    """Prepare termalign input as TSV file or TSV directory.
+
+    Supports:
+    - single JSONL (converted to one TSV),
+    - single TSV (used as-is),
+    - directory containing JSONL/TSV (normalized into a TSV directory).
+    """
+    if input_path.is_file():
+        if input_path.suffix.lower() == ".jsonl":
+            tsv_path = tmpdir_path / "bertalign_input.tsv"
+            _jsonl_to_tsv(input_path, tsv_path)
+            return tsv_path
+        if input_path.suffix.lower() == ".tsv":
+            return input_path
+        raise ValueError(f"Unsupported bertalign input file type: {input_path}")
+
+    if input_path.is_dir():
+        out_dir = tmpdir_path / "bertalign_batch_tsv"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        found = False
+        for child in sorted(input_path.iterdir()):
+            if not child.is_file():
+                continue
+            suffix = child.suffix.lower()
+            if suffix == ".tsv":
+                shutil.copy2(child, out_dir / child.name)
+                found = True
+            elif suffix == ".jsonl":
+                _jsonl_to_tsv(child, out_dir / f"{child.stem}.tsv")
+                found = True
+        if not found:
+            raise ValueError(f"No .tsv/.jsonl bertalign files found under directory: {input_path}")
+        return out_dir
+
+    raise FileNotFoundError(f"bertalign input not found: {input_path}")
+
+
 def _resolve_default_term_lists(
     dict_zh_path: str | None,
     dict_en_path: str | None,
@@ -139,21 +177,19 @@ def run_termalign(
 
     dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
 
-    input_jsonl = Path(bertalign_output)
+    input_data = Path(bertalign_output)
     output_path = Path(output_file)
 
     with tempfile.TemporaryDirectory(prefix="termalign-") as tmpdir:
         from termalign_step.termalign_pipeline.pipeline import run_pipeline
 
         tmpdir_path = Path(tmpdir)
-        input_tsv = tmpdir_path / "bertalign_input.tsv"
+        prepared_input = _prepare_termalign_input(input_data, tmpdir_path)
         actual_output_dir = Path(output_dir) if output_dir else output_path.parent
         actual_output_dir.mkdir(parents=True, exist_ok=True)
 
-        _jsonl_to_tsv(input_jsonl, input_tsv)
-
         run_pipeline(
-            input_path=input_tsv,
+            input_path=prepared_input,
             dict_zh_path=dict_zh_path,
             dict_en_path=dict_en_path,
             bert_model_zh=zh_extractor_model,

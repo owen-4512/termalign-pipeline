@@ -307,6 +307,24 @@ python pipeline/runner.py termalign --bertalign-output ... --termalign-output ..
 python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ... --evaluation-output ...
 ```
 
+### 总 pipeline 中使用 bertalign 批量模式
+
+如果 Task1 是一批 `*_zh.txt` / `*_en.txt` 文件（命名 `YYYY_ID_lang.txt`），可直接在总 pipeline 里开启 batch bertalign：
+
+```bash
+python pipeline/runner.py full \
+  --bertalign-batch-data-dir data/Task1 \
+  --bertalign-batch-output-dir data/Task1/batch_tsv \
+  --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
+  --dictionary-path data/Task3/term_dict.json \
+  --evaluation-output evaluation_step/data/outputs/evaluation_result.json
+```
+
+说明：
+- `--bertalign-batch-data-dir` 开启 batch bertalign；
+- batch 结果会作为目录输入直接传给 termalign；
+- termalign 会自动汇总多文件输出，evaluation 使用汇总结果打分。
+
 ### 总 pipeline CLI：termalign 模式示例
 
 使用 Hugging Face 模型（默认）：

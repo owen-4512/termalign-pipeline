@@ -91,6 +91,9 @@ def add_bertalign_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--bertalign-win", type=int, default=8)
     p.add_argument("--bertalign-src-lang", default="zh")
     p.add_argument("--bertalign-tgt-lang", default="en")
+    p.add_argument("--bertalign-batch-data-dir", default=None, help="Run bertalign in batch mode using input dir")
+    p.add_argument("--bertalign-batch-output-dir", default=None, help="Batch bertalign TSV output directory")
+    p.add_argument("--bertalign-batch-strict", action="store_true", help="Batch bertalign strict mode")
 
 
 def add_termalign_args(p: argparse.ArgumentParser) -> None:
@@ -214,20 +217,37 @@ def run_full(args: argparse.Namespace) -> str:
 
     logging.info("Execution mode: sequential")
     from bertalign_step.run_bertalign import run_bertalign
+    from bertalign_step.batch_align import run_batch_alignment
     from termalign_step.run_termalign import run_termalign
     from evaluation_step.evaluate_terms import evaluate_terms
-    ba_out = run_bertalign(
-        source_file=args.source_file,
-        target_file=args.target_file,
-        output_file=args.bertalign_output,
-        external_command=args.bertalign_command,
-        default_confidence=args.bertalign_default_confidence,
-        max_align=args.bertalign_max_align,
-        top_k=args.bertalign_top_k,
-        win=args.bertalign_win,
-        src_lang=args.bertalign_src_lang,
-        tgt_lang=args.bertalign_tgt_lang,
-    )
+    if args.bertalign_batch_data_dir:
+        batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task1" / "batch_tsv")
+        code = run_batch_alignment(
+            data_dir=args.bertalign_batch_data_dir,
+            output_dir=batch_output_dir,
+            src_lang=args.bertalign_src_lang,
+            tgt_lang=args.bertalign_tgt_lang,
+            max_align=args.bertalign_max_align,
+            top_k=args.bertalign_top_k,
+            win=args.bertalign_win,
+            strict=args.bertalign_batch_strict,
+        )
+        if code != 0:
+            raise RuntimeError(f"Batch bertalign failed with exit code={code}")
+        ba_out = batch_output_dir
+    else:
+        ba_out = run_bertalign(
+            source_file=args.source_file,
+            target_file=args.target_file,
+            output_file=args.bertalign_output,
+            external_command=args.bertalign_command,
+            default_confidence=args.bertalign_default_confidence,
+            max_align=args.bertalign_max_align,
+            top_k=args.bertalign_top_k,
+            win=args.bertalign_win,
+            src_lang=args.bertalign_src_lang,
+            tgt_lang=args.bertalign_tgt_lang,
+        )
     ta_out = run_termalign(
         bertalign_output=ba_out,
         output_file=args.termalign_output,
@@ -282,19 +302,36 @@ def main() -> None:
 
     if args.command == "bertalign":
         from bertalign_step.run_bertalign import run_bertalign
-        ensure_parent_dirs(args.bertalign_output)
-        out = run_bertalign(
-            source_file=args.source_file,
-            target_file=args.target_file,
-            output_file=args.bertalign_output,
-            external_command=args.bertalign_command,
-            default_confidence=args.bertalign_default_confidence,
-            max_align=args.bertalign_max_align,
-            top_k=args.bertalign_top_k,
-            win=args.bertalign_win,
-            src_lang=args.bertalign_src_lang,
-            tgt_lang=args.bertalign_tgt_lang,
-        )
+        from bertalign_step.batch_align import run_batch_alignment
+        if args.bertalign_batch_data_dir:
+            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task1" / "batch_tsv")
+            code = run_batch_alignment(
+                data_dir=args.bertalign_batch_data_dir,
+                output_dir=batch_output_dir,
+                src_lang=args.bertalign_src_lang,
+                tgt_lang=args.bertalign_tgt_lang,
+                max_align=args.bertalign_max_align,
+                top_k=args.bertalign_top_k,
+                win=args.bertalign_win,
+                strict=args.bertalign_batch_strict,
+            )
+            if code != 0:
+                raise RuntimeError(f"Batch bertalign failed with exit code={code}")
+            out = batch_output_dir
+        else:
+            ensure_parent_dirs(args.bertalign_output)
+            out = run_bertalign(
+                source_file=args.source_file,
+                target_file=args.target_file,
+                output_file=args.bertalign_output,
+                external_command=args.bertalign_command,
+                default_confidence=args.bertalign_default_confidence,
+                max_align=args.bertalign_max_align,
+                top_k=args.bertalign_top_k,
+                win=args.bertalign_win,
+                src_lang=args.bertalign_src_lang,
+                tgt_lang=args.bertalign_tgt_lang,
+            )
         logging.info("bertalign finished. Output: %s", out)
         print(out)
         return
