@@ -214,7 +214,7 @@ python evaluation_step/evaluate_terms.py \
   --report-level both \
   --metrics all \
   --alpha 0.2 \
-  --debug-log evaluation_step/data/outputs/debug_metrics.json
+  --debug-log evaluation_step/data/outputs/metrics.json
 ```
 
 核心加权逻辑：
@@ -235,17 +235,17 @@ python evaluation_step/term_eval_pipeline.py \
   --report-level both \
   --metrics all \
   --alpha 0.2 \
-  --debug-log evaluation_step/data/outputs/debug_metrics.json \
+  --debug-log evaluation_step/data/outputs/metrics.json \
   --output-json evaluation_step/data/outputs/evaluation_result_full.json
 ```
 
 会输出：
-- 一个总 log：`debug_metrics.json`
-- 一个子 log 目录：默认 `debug_metrics_sublogs/`（可通过 `--debug-sublogs-dir` 指定）
+- 一个总 log：`metrics.json`
+- 一个子 log 目录：默认 `metrics_sublogs/`（可通过 `--debug-sublogs-dir` 指定）
   - `accuracy.json`
   - `consistency.json`
 
-总 log `debug_metrics.json` 中会记录：
+总 log `metrics.json` 中会记录：
 - accuracy：每个术语 occurrence 的 `gold_candidates`、单项得分（`score`，范围 0~1）
 - consistency：统一分区；单文档时记录单文件术语明细，多文档时记录跨文件术语明细；多文档时 summary 额外含 `per_file_consistency_scores`
 - 额外元信息：`num_records`、`num_source_terms`、`selected_metrics` 等
@@ -286,7 +286,7 @@ python pipeline/prefect_flow.py \
   --eval-report-level both \
   --eval-metrics all \
   --eval-alpha 0.2 \
-  --eval-debug-log evaluation_step/data/outputs/debug_metrics.json
+  --eval-debug-log evaluation_step/data/outputs/metrics.json
 ```
 
 Prefect 也支持在总流程中启用 batch bertalign（后续自动进入 termalign + evaluation）：

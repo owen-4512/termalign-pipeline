@@ -97,8 +97,8 @@ def evaluate_terms(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    log_path = Path(debug_log) if debug_log else (out_path.parent / "debug_metrics.json")
-    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (log_path.parent / "debug_metrics_sublogs")
+    log_path = Path(debug_log) if debug_log else (out_path.parent / "metrics.json")
+    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (log_path.parent / "metrics_sublogs")
     log_path.parent.mkdir(parents=True, exist_ok=True)
     sublogs_dir.mkdir(parents=True, exist_ok=True)
     log_path.write_text(json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2), encoding="utf-8")

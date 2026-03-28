@@ -24,7 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--metrics", nargs="+", default=["all"])
     parser.add_argument("--alpha", type=float, default=0.2)
     parser.add_argument("--beta", type=float, default=0.0)
-    parser.add_argument("--debug-log", type=Path, default=Path("evaluation_step/data/outputs/debug_metrics.json"))
+    parser.add_argument("--debug-log", type=Path, default=Path("evaluation_step/data/outputs/metrics.json"))
     parser.add_argument("--debug-sublogs-dir", type=Path, default=None)
     parser.add_argument("--output-json", type=Path, default=None)
     return parser
@@ -61,7 +61,7 @@ def main() -> None:
     debug_info = result.get("debug", {})
     debug_log.write_text(json.dumps(debug_info, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    sublogs = args.debug_sublogs_dir if args.debug_sublogs_dir else debug_log.parent / "debug_metrics_sublogs"
+    sublogs = args.debug_sublogs_dir if args.debug_sublogs_dir else debug_log.parent / "metrics_sublogs"
     sublogs.mkdir(parents=True, exist_ok=True)
     if isinstance(debug_info, dict):
         if "accuracy" in debug_info:
