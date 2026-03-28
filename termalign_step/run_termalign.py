@@ -72,10 +72,20 @@ def run_termalign(
     dict_en_path: str | None = None,
     skip_bert: bool = False,
 ) -> str:
-    del min_term_confidence, source_lang, target_lang, api_endpoint, api_key, device
+    del min_term_confidence, source_lang, target_lang, device
 
     if extraction_mode == "api":
-        raise ValueError("The provided termalign scripts do not support API mode. Please use extraction_mode='model'.")
+        if not api_endpoint:
+            raise ValueError("api_endpoint is required when extraction_mode='api'.")
+        from termalign_step.run_termalign_api import run_termalign_api
+        return run_termalign_api(
+            bertalign_output=bertalign_output,
+            output_file=output_file,
+            api_endpoint=api_endpoint,
+            api_key=api_key,
+            min_pair_confidence=min_pair_confidence,
+            top_k_pairs=top_k_pairs,
+        )
 
     input_jsonl = Path(bertalign_output)
     output_jsonl = Path(output_file)

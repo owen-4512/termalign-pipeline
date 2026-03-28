@@ -153,14 +153,14 @@ python termalign_step/run_termalign.py \
 
 ### C. termalign 步骤（API 模式）
 
-你提供的 termalign 全量脚本不包含 API 提取分支，因此当前 `run_termalign.py` 在 `--extraction-mode api` 下会报错并提示改用模型模式。
+新增了专用 API 子脚本 `termalign_step/run_termalign_api.py`，并且 `run_termalign.py --extraction-mode api` 会自动调用它。
 
 ```bash
 python termalign_step/run_termalign.py \
   --bertalign-output data/Task1/bertalign.jsonl \
   --output-file data/Task2/termalign.jsonl \
   --extraction-mode api \
-  --api-endpoint https://your-api/term-extract \
+  --api-endpoint https://your-api/term-align \
   --api-key YOUR_KEY
 ```
 
@@ -198,6 +198,14 @@ python pipeline/prefect_flow.py \
   --eval-min-confidence 0.4 \
   --eval-smoothing-alpha 0.1 \
   --eval-normalize-entropy
+```
+
+### Prefect/runner 之外的一键 API 全流程脚本
+
+```bash
+python pipeline/run_pipeline_api.py \
+  --api-endpoint https://your-api/term-align \
+  --api-key YOUR_KEY
 ```
 
 ---
