@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Unified runner for single-step or full pipeline execution.
 
-This runner is intentionally independent from Prefect deployment setup.
-It can:
+This runner can:
 1) run each sub-step independently (bertalign / termalign / evaluation), or
 2) run the full flow via Prefect (`--use-prefect`), or
 3) run the full flow sequentially in plain Python (default).
+
+It also supports a standardized data layout under `data/`.
 """
 
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 
 from bertalign_step.run_bertalign import run_bertalign
 from evaluation_step.evaluate_terms import evaluate_terms
@@ -18,13 +20,47 @@ from pipeline.prefect_flow import term_pipeline
 from termalign_step.run_termalign import run_termalign
 
 
+def resolve_default_paths(data_dir: str) -> dict[str, str]:
+    root = Path(data_dir)
+    return {
+        "source_file": str(root / "input" / "source.txt"),
+        "target_file": str(root / "input" / "target.txt"),
+        "dictionary_path": str(root / "input" / "term_dict.json"),
+        "bertalign_output": str(root / "intermediate" / "bertalign.jsonl"),
+        "termalign_output": str(root / "intermediate" / "termalign.jsonl"),
+        "evaluation_output": str(root / "output" / "evaluation.json"),
+    }
+
+
+def ensure_parent_dirs(*paths: str) -> None:
+    for p in paths:
+        Path(p).parent.mkdir(parents=True, exist_ok=True)
+
+
+def apply_data_defaults(args: argparse.Namespace) -> argparse.Namespace:
+    defaults = resolve_default_paths(args.data_dir)
+    for key, value in defaults.items():
+        if getattr(args, key, None) is None:
+            setattr(args, key, value)
+    return args
+
+
+def add_data_dir_arg(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--data-dir",
+        default="data",
+        help="Unified project data root (default: data). Expected layout: input/intermediate/output",
+    )
+
+
 def add_common_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--source-file", required=True)
-    p.add_argument("--target-file", required=True)
-    p.add_argument("--dictionary-path", required=True)
-    p.add_argument("--bertalign-output", required=True)
-    p.add_argument("--termalign-output", required=True)
-    p.add_argument("--evaluation-output", required=True)
+    add_data_dir_arg(p)
+    p.add_argument("--source-file", default=None)
+    p.add_argument("--target-file", default=None)
+    p.add_argument("--dictionary-path", default=None)
+    p.add_argument("--bertalign-output", default=None)
+    p.add_argument("--termalign-output", default=None)
+    p.add_argument("--evaluation-output", default=None)
 
 
 def add_bertalign_args(p: argparse.ArgumentParser) -> None:
@@ -69,26 +105,32 @@ def build_parser() -> argparse.ArgumentParser:
     full.add_argument("--use-prefect", action="store_true", help="Run full flow through Prefect")
 
     ba = sub.add_parser("bertalign", help="Run only bertalign")
-    ba.add_argument("--source-file", required=True)
-    ba.add_argument("--target-file", required=True)
-    ba.add_argument("--bertalign-output", required=True)
+    add_data_dir_arg(ba)
+    ba.add_argument("--source-file", default=None)
+    ba.add_argument("--target-file", default=None)
+    ba.add_argument("--bertalign-output", default=None)
     add_bertalign_args(ba)
 
     ta = sub.add_parser("termalign", help="Run only termalign")
-    ta.add_argument("--bertalign-output", required=True)
-    ta.add_argument("--termalign-output", required=True)
+    add_data_dir_arg(ta)
+    ta.add_argument("--bertalign-output", default=None)
+    ta.add_argument("--termalign-output", default=None)
     add_termalign_args(ta)
 
     ev = sub.add_parser("evaluation", help="Run only evaluation")
-    ev.add_argument("--termalign-output", required=True)
-    ev.add_argument("--dictionary-path", required=True)
-    ev.add_argument("--evaluation-output", required=True)
+    add_data_dir_arg(ev)
+    ev.add_argument("--termalign-output", default=None)
+    ev.add_argument("--dictionary-path", default=None)
+    ev.add_argument("--evaluation-output", default=None)
     add_eval_args(ev)
 
     return parser
 
 
 def run_full(args: argparse.Namespace) -> str:
+    args = apply_data_defaults(args)
+    ensure_parent_dirs(args.bertalign_output, args.termalign_output, args.evaluation_output)
+
     if args.use_prefect:
         return term_pipeline(
             source_file=args.source_file,
@@ -166,7 +208,10 @@ def main() -> None:
         print(out)
         return
 
+    args = apply_data_defaults(args)
+
     if args.command == "bertalign":
+        ensure_parent_dirs(args.bertalign_output)
         out = run_bertalign(
             source_file=args.source_file,
             target_file=args.target_file,
@@ -178,6 +223,7 @@ def main() -> None:
         return
 
     if args.command == "termalign":
+        ensure_parent_dirs(args.termalign_output)
         out = run_termalign(
             bertalign_output=args.bertalign_output,
             output_file=args.termalign_output,
@@ -198,6 +244,7 @@ def main() -> None:
         return
 
     if args.command == "evaluation":
+        ensure_parent_dirs(args.evaluation_output)
         out = evaluate_terms(
             termalign_output=args.termalign_output,
             dictionary_path=args.dictionary_path,

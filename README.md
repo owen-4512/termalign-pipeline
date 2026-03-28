@@ -28,6 +28,25 @@ pip install -r evaluation_step/requirements.txt
 
 ## 数据格式
 
+## 项目目录建议（统一管理输入输出）
+
+```
+data/
+├─ input/
+│  ├─ source.txt
+│  ├─ target.txt
+│  └─ term_dict.json
+├─ intermediate/
+│  ├─ bertalign.jsonl
+│  └─ termalign.jsonl
+└─ output/
+   └─ evaluation.json
+```
+
+默认 `pipeline/runner.py` 会按这个结构找文件；也可以用 `--data-dir` 或显式参数覆盖。
+
+---
+
 ### 输入文件
 - `source_file`: 源语言文本（每行一个句段）
 - `target_file`: 目标语言文本（每行一个句段）
@@ -134,17 +153,13 @@ python pipeline/prefect_flow.py \
 如果你希望通过**一个脚本**来运行全流程或任意子步骤，可使用：
 
 ```bash
-python pipeline/runner.py full \
-  --source-file data/source.txt \
-  --target-file data/target.txt \
-  --dictionary-path data/term_dict.json \
-  --bertalign-output outputs/bertalign.jsonl \
-  --termalign-output outputs/termalign.jsonl \
-  --evaluation-output outputs/evaluation.json
+python pipeline/runner.py full
+# 默认读写 data/input, data/intermediate, data/output
 ```
 
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
 - 如果想强制走 Prefect 编排，可加 `--use-prefect`。
+- 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
 - 也可以单独跑子命令：
 
 ```bash
