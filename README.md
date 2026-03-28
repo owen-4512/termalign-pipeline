@@ -279,8 +279,6 @@ Prefect 也支持在总流程中启用 batch bertalign（后续自动进入 term
 
 ```bash
 python pipeline/prefect_flow.py \
-  --source-file data/Task1/source.txt \
-  --target-file data/Task1/target.txt \
   --dictionary-path data/Task3/term_dict.json \
   --bertalign-output data/Task2/bertalign.jsonl \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
@@ -293,6 +291,11 @@ python pipeline/prefect_flow.py \
   --eval-report-level both \
   --eval-metrics all
 ```
+
+说明（batch 全流程最终评分）：
+- 该命令会完成：batch bertalign → batch termalign 聚合 → evaluation；
+- evaluation CLI 会在终端打印精简分数 JSON（含 `final_score`）；
+- 默认结果文件写入 `data/results/evaluation_result.json`（可用 `--evaluation-output` 覆盖）。
 
 ### Prefect/runner 之外的一键 API 全流程脚本
 
@@ -349,7 +352,7 @@ python pipeline/runner.py full \
 说明：
 - `--bertalign-batch-data-dir` 开启 batch bertalign；
 - batch 结果会作为目录输入直接传给 termalign；
-- termalign 会自动汇总多文件输出，evaluation 使用汇总结果打分。
+- termalign 会自动汇总多文件输出，evaluation 使用汇总结果打分并产出 `final_score`。
 
 ### 总 pipeline CLI：termalign 模式示例
 

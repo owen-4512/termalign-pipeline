@@ -61,8 +61,8 @@ def evaluation_task(**kwargs: str) -> str:
 
 @flow(name="term-translation-scoring-pipeline")
 def term_pipeline(
-    source_file: str,
-    target_file: str,
+    source_file: str | None,
+    target_file: str | None,
     dictionary_path: str,
     bertalign_output: str,
     termalign_output: str,
@@ -118,6 +118,8 @@ def term_pipeline(
             strict=bertalign_batch_strict,
         ).result()
     else:
+        if not source_file or not target_file:
+            raise ValueError("single-file mode requires source_file and target_file")
         ba_out = bertalign_task.submit(
             source_file=source_file,
             target_file=target_file,
@@ -174,8 +176,8 @@ def term_pipeline(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description="Prefect term translation scoring pipeline")
-    p.add_argument("--source-file", required=True)
-    p.add_argument("--target-file", required=True)
+    p.add_argument("--source-file", default=None)
+    p.add_argument("--target-file", default=None)
     p.add_argument("--dictionary-path", required=True)
     p.add_argument("--bertalign-output", required=True)
     p.add_argument("--termalign-output", required=True)
@@ -225,6 +227,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_arg_parser().parse_args()
+    if not args.bertalign_batch_data_dir and not (args.source_file and args.target_file):
+        raise ValueError("Provide --source-file/--target-file, or use --bertalign-batch-data-dir for batch mode.")
     term_pipeline(
         source_file=args.source_file,
         target_file=args.target_file,
