@@ -29,7 +29,7 @@ def resolve_default_paths(data_dir: str) -> dict[str, str]:
         "bertalign_output": str(root / "Task1" / "bertalign.jsonl"),
         "termalign_output": str(Path("termalign_step") / "data" / "outputs" / "all_alignments_high_conf.tsv"),
         "dictionary_path": str(root / "Task3" / "term_dict.json"),
-        "evaluation_output": str(root / "Task3" / "evaluation.json"),
+        "evaluation_output": str(Path("evaluation_step") / "data" / "outputs" / "evaluation_result.json"),
     }
 
 

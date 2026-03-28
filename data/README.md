@@ -11,7 +11,7 @@
 - `data/Task3/dict_zh.txt`：termalign 中文术语词典（可选）
 - `data/Task3/dict_en.txt`：termalign 英文术语词典（可选）
 - `data/Task3/termalign_prompt.txt`：termalign API 模式 prompt 文本（可选）
-- `data/Task3/evaluation.json`：Task3（evaluation）输出
+- `evaluation_step/data/outputs/evaluation_result.json`：Task3（evaluation）推荐输出
 
 补充：如果不传 termalign 的词典参数，termalign 子项目会自动尝试读取：  
 `termalign_step/term_list/zh_terms.txt` 与 `termalign_step/term_list/en_terms.txt`。

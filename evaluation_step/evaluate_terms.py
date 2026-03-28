@@ -50,6 +50,8 @@ def evaluate_terms(
     entropy_base: float = 2.0,
     normalize_entropy: bool = False,
     top_k_variants: int | None = None,
+    debug_log: str | None = None,
+    debug_sublogs_dir: str | None = None,
 ) -> str:
     del min_confidence, confidence_field, count_field, entropy_base, normalize_entropy, top_k_variants
 
@@ -82,8 +84,31 @@ def evaluate_terms(
             include_debug=True,
         )
 
+    batch_score = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), dict) else {}
+    summary = {k: batch_score[k] for k in ("precision", "consistency", "final_score") if k in batch_score}
+    print(json.dumps(summary, ensure_ascii=False))
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    log_path = Path(debug_log) if debug_log else (out_path.parent / "debug_metrics.json")
+    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (log_path.parent / "debug_metrics_sublogs")
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    sublogs_dir.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2), encoding="utf-8")
+    debug_obj = result.get("debug", {})
+    if isinstance(debug_obj, dict):
+        if "accuracy" in debug_obj:
+            (sublogs_dir / "accuracy.json").write_text(
+                json.dumps(debug_obj["accuracy"], ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        if "consistency" in debug_obj:
+            (sublogs_dir / "consistency.json").write_text(
+                json.dumps(debug_obj["consistency"], ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+
     return str(out_path)
 
 
@@ -99,6 +124,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--entropy-base", type=float, default=2.0)
     parser.add_argument("--normalize-entropy", action="store_true")
     parser.add_argument("--top-k-variants", type=int, default=None)
+    parser.add_argument("--debug-log", default=None)
+    parser.add_argument("--debug-sublogs-dir", default=None)
     return parser
 
 
@@ -115,6 +142,8 @@ def main() -> None:
         entropy_base=args.entropy_base,
         normalize_entropy=args.normalize_entropy,
         top_k_variants=args.top_k_variants,
+        debug_log=args.debug_log,
+        debug_sublogs_dir=args.debug_sublogs_dir,
     )
 
 

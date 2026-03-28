@@ -200,6 +200,31 @@ python evaluation_step/evaluate_terms.py \
 
 ---
 
+### D2. 输出详细 debug 日志（总 log + 子 log）
+
+```bash
+python evaluation_step/term_eval_pipeline.py \
+  --term-align-tsv termalign_step/data/outputs/all_alignments_high_conf.tsv \
+  --gold-jsonl data/Task3/gold.jsonl \
+  --mode batch \
+  --target-dir data/targets \
+  --report-level both \
+  --metrics all \
+  --alpha 0.2 \
+  --debug-log evaluation_step/data/outputs/debug_metrics.json \
+  --output-json evaluation_step/data/outputs/evaluation_result_full.json
+```
+
+会输出：
+- 一个总 log：`debug_metrics.json`
+- 一个子 log 目录：默认 `debug_metrics_sublogs/`（可通过 `--debug-sublogs-dir` 指定）
+  - `accuracy.json`
+  - `consistency.json`
+
+CLI 标准输出会打印精简 JSON：`precision` / `consistency` / `final_score`。
+
+---
+
 ## Prefect 总流程运行
 
 ```bash
