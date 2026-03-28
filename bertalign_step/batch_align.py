@@ -15,6 +15,11 @@ if str(PROJECT_ROOT) not in sys.path:
 from bertalign_step.single_align import run_alignment
 
 
+def _normalize_file_id(file_id: str) -> str:
+    """Normalize pair id to a stable two-digit form for output naming."""
+    return file_id.zfill(2) if file_id.isdigit() else file_id
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Batch sentence alignment based on filename pattern YYYY_ID_lang.txt"
@@ -75,7 +80,7 @@ def run_batch_alignment(
         file_id = m.group("id")
 
         tgt_file = data_dir / f"{prefix}_{file_id}_{tgt_lang}.txt"
-        out_file = output_dir / f"{prefix}_{file_id}_{src_lang}_{tgt_lang}_align.tsv"
+        out_file = output_dir / f"{prefix}_{_normalize_file_id(file_id)}_{src_lang}_{tgt_lang}_align.tsv"
 
         if not tgt_file.exists():
             print(f"⚠️ Missing target file: {tgt_file.name}")

@@ -143,6 +143,9 @@ python bertalign_step/batch_align.py \
   --tgt-lang en
 ```
 
+批量输出文件名格式为：`YYYY_MM_zh_en_align.tsv`（例如 `2016_01_zh_en_align.tsv`）。
+当输入中的 `ID` 是数字时会自动补齐到至少两位（`1 -> 01`）。
+
 ### B. termalign 步骤（模型模式）
 
 `termalign_step/run_termalign.py` 现已对接你提供的完整 termalign 脚本体系（`align.py / extractors.py / io_utils.py / pipeline.py / cli.py`），执行流程是：  
