@@ -9,6 +9,20 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+HF_ZH_MODEL = "owen4512/bert-base-chinese-finance-term-extractor"
+HF_EN_MODEL = "owen4512/bert-base-cased-finance-term-extractor"
+HF_ALIGN_MODEL = "owen4512/minilm-finance-term-aligner"
+
+
+def _ensure_hf_models_downloaded() -> None:
+    """Pre-download required Hugging Face models for hf mode."""
+    from huggingface_hub import snapshot_download
+
+    snapshot_download(repo_id=HF_ZH_MODEL)
+    snapshot_download(repo_id=HF_EN_MODEL)
+    snapshot_download(repo_id=HF_ALIGN_MODEL)
+
+
 def _jsonl_to_tsv(input_jsonl: Path, output_tsv: Path) -> str:
     import pandas as pd
 
@@ -99,6 +113,12 @@ def run_termalign(
             prompt_text=prompt_text,
         )
 
+    if mode == "hf":
+        _ensure_hf_models_downloaded()
+        zh_extractor_model = HF_ZH_MODEL
+        en_extractor_model = HF_EN_MODEL
+        aligner_model = HF_ALIGN_MODEL
+
     input_jsonl = Path(bertalign_output)
     output_jsonl = Path(output_file)
 
@@ -146,9 +166,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--source-lang", default="zh")
     parser.add_argument("--target-lang", default="en")
     parser.add_argument("--top-k-pairs", type=int, default=0)
-    parser.add_argument("--aligner-model", default="owen4512/minilm-finance-term-aligner")
-    parser.add_argument("--zh-extractor-model", default="owen4512/bert-base-chinese-finance-term-extractor")
-    parser.add_argument("--en-extractor-model", default="owen4512/bert-base-cased-finance-term-extractor")
+    parser.add_argument("--aligner-model", default=HF_ALIGN_MODEL)
+    parser.add_argument("--zh-extractor-model", default=HF_ZH_MODEL)
+    parser.add_argument("--en-extractor-model", default=HF_EN_MODEL)
     parser.add_argument("--api-endpoint", default=None)
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--device", type=int, default=-1)

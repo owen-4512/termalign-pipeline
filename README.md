@@ -51,6 +51,16 @@ logs/
 
 ---
 
+## 子项目独立数据目录
+
+因为每个子项目都可以单独运行，已分别提供独立数据目录：
+
+- `bertalign_step/data/inputs`、`bertalign_step/data/outputs`
+- `termalign_step/data/inputs`、`termalign_step/data/outputs`
+- `evaluation_step/data/inputs`、`evaluation_step/data/outputs`
+
+---
+
 ### 输入文件
 - `source_file`: 源语言文本（每行一个句段）
 - `target_file`: 目标语言文本（每行一个句段）
@@ -225,7 +235,10 @@ python pipeline/runner.py full
 - 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
 - 日志目录可通过 `--logs-dir /path/to/logs` 指定。
 - `termalign` 步骤新增统一模式参数：`--termalign-mode {api,local,hf}`  
-  - `hf`：使用你提供的 Hugging Face 模型（默认）  
+  - `hf`：自动下载并使用你提供的 Hugging Face 模型（默认）  
+    - `owen4512/bert-base-chinese-finance-term-extractor`（中文术语提取）  
+    - `owen4512/bert-base-cased-finance-term-extractor`（英文术语提取）  
+    - `owen4512/minilm-finance-term-aligner`（中英术语对齐）  
   - `local`：使用本地模型路径（通过 `--aligner-model / --zh-extractor-model / --en-extractor-model` 传入）  
   - `api`：使用 API 术语对齐（可传 GPT 模型名）
 - 也可以单独跑子命令：
