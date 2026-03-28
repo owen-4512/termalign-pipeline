@@ -24,12 +24,12 @@ if str(PROJECT_ROOT) not in sys.path:
 def resolve_default_paths(data_dir: str) -> dict[str, str]:
     root = Path(data_dir)
     return {
-        "source_file": str(root / "input" / "source.txt"),
-        "target_file": str(root / "input" / "target.txt"),
-        "dictionary_path": str(root / "input" / "term_dict.json"),
-        "bertalign_output": str(root / "intermediate" / "bertalign.jsonl"),
-        "termalign_output": str(root / "intermediate" / "termalign.jsonl"),
-        "evaluation_output": str(root / "output" / "evaluation.json"),
+        "source_file": str(root / "Task1" / "source.txt"),
+        "target_file": str(root / "Task1" / "target.txt"),
+        "bertalign_output": str(root / "Task1" / "bertalign.jsonl"),
+        "termalign_output": str(root / "Task2" / "termalign.jsonl"),
+        "dictionary_path": str(root / "Task3" / "term_dict.json"),
+        "evaluation_output": str(root / "Task3" / "evaluation.json"),
     }
 
 
@@ -64,7 +64,7 @@ def add_data_dir_arg(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--data-dir",
         default="data",
-        help="Unified project data root (default: data). Expected layout: input/intermediate/output",
+        help="Unified project data root (default: data). Expected layout: Task1/Task2/Task3",
     )
     p.add_argument(
         "--logs-dir",

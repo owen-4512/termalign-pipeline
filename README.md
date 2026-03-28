@@ -32,14 +32,14 @@ pip install -r evaluation_step/requirements.txt
 
 ```
 data/
-├─ input/
+├─ Task1/
 │  ├─ source.txt
 │  ├─ target.txt
-│  └─ term_dict.json
-├─ intermediate/
-│  ├─ bertalign.jsonl
+│  └─ bertalign.jsonl
+├─ Task2/
 │  └─ termalign.jsonl
-└─ output/
+└─ Task3/
+   ├─ term_dict.json
    └─ evaluation.json
 
 logs/
@@ -72,9 +72,9 @@ logs/
 
 ```bash
 python bertalign_step/run_bertalign.py \
-  --source-file data/source.txt \
-  --target-file data/target.txt \
-  --output-file outputs/bertalign.jsonl \
+  --source-file data/Task1/source.txt \
+  --target-file data/Task1/target.txt \
+  --output-file data/Task1/bertalign.jsonl \
   --default-confidence 0.85
 ```
 
@@ -82,9 +82,9 @@ python bertalign_step/run_bertalign.py \
 
 ```bash
 python bertalign_step/run_bertalign.py \
-  --source-file data/source.txt \
-  --target-file data/target.txt \
-  --output-file outputs/bertalign.jsonl \
+  --source-file data/Task1/source.txt \
+  --target-file data/Task1/target.txt \
+  --output-file data/Task1/bertalign.jsonl \
   --external-command "python your_bertalign_runner.py --src {src} --tgt {tgt} --out {out}"
 ```
 
@@ -92,8 +92,8 @@ python bertalign_step/run_bertalign.py \
 
 ```bash
 python termalign_step/run_termalign.py \
-  --bertalign-output outputs/bertalign.jsonl \
-  --output-file outputs/termalign.jsonl \
+  --bertalign-output data/Task1/bertalign.jsonl \
+  --output-file data/Task2/termalign.jsonl \
   --extraction-mode model \
   --aligner-model owen4512/minilm-finance-term-aligner \
   --zh-extractor-model owen4512/bert-base-chinese-finance-term-extractor \
@@ -106,8 +106,8 @@ python termalign_step/run_termalign.py \
 
 ```bash
 python termalign_step/run_termalign.py \
-  --bertalign-output outputs/bertalign.jsonl \
-  --output-file outputs/termalign.jsonl \
+  --bertalign-output data/Task1/bertalign.jsonl \
+  --output-file data/Task2/termalign.jsonl \
   --extraction-mode api \
   --api-endpoint https://your-api/term-extract \
   --api-key YOUR_KEY
@@ -117,9 +117,9 @@ python termalign_step/run_termalign.py \
 
 ```bash
 python evaluation_step/evaluate_terms.py \
-  --termalign-output outputs/termalign.jsonl \
-  --dictionary-path data/term_dict.json \
-  --output-file outputs/evaluation.json \
+  --termalign-output data/Task2/termalign.jsonl \
+  --dictionary-path data/Task3/term_dict.json \
+  --output-file data/Task3/evaluation.json \
   --min-confidence 0.4 \
   --smoothing-alpha 0.1 \
   --normalize-entropy
@@ -135,12 +135,12 @@ python evaluation_step/evaluate_terms.py \
 
 ```bash
 python pipeline/prefect_flow.py \
-  --source-file data/source.txt \
-  --target-file data/target.txt \
-  --dictionary-path data/term_dict.json \
-  --bertalign-output outputs/bertalign.jsonl \
-  --termalign-output outputs/termalign.jsonl \
-  --evaluation-output outputs/evaluation.json \
+  --source-file data/Task1/source.txt \
+  --target-file data/Task1/target.txt \
+  --dictionary-path data/Task3/term_dict.json \
+  --bertalign-output data/Task1/bertalign.jsonl \
+  --termalign-output data/Task2/termalign.jsonl \
+  --evaluation-output data/Task3/evaluation.json \
   --extraction-mode model \
   --min-term-confidence 0.5 \
   --min-pair-confidence 0.5 \
@@ -158,7 +158,7 @@ python pipeline/prefect_flow.py \
 
 ```bash
 python pipeline/runner.py full
-# 默认读写 data/input, data/intermediate, data/output
+# 默认读写 data/Task1, data/Task2, data/Task3
 ```
 
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
