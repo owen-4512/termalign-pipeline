@@ -41,9 +41,13 @@ data/
 │  └─ termalign.jsonl
 └─ output/
    └─ evaluation.json
+
+logs/
+└─ *.log
 ```
 
 默认 `pipeline/runner.py` 会按这个结构找文件；也可以用 `--data-dir` 或显式参数覆盖。
+每次运行会写日志到 `logs/`，也可以用 `--logs-dir` 指定目录。
 
 ---
 
@@ -160,6 +164,7 @@ python pipeline/runner.py full
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
 - 如果想强制走 Prefect 编排，可加 `--use-prefect`。
 - 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
+- 日志目录可通过 `--logs-dir /path/to/logs` 指定。
 - 也可以单独跑子命令：
 
 ```bash
@@ -181,4 +186,3 @@ python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ..
 - 熵参数：`--eval-entropy-base`、`--eval-normalize-entropy`
 - 可选平滑：`--eval-smoothing-alpha`
 - 统计截断：`--eval-top-k-variants`
-

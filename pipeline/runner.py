@@ -12,13 +12,14 @@ It also supports a standardized data layout under `data/`.
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
+from datetime import datetime
+import sys
 
-from bertalign_step.run_bertalign import run_bertalign
-from evaluation_step.evaluate_terms import evaluate_terms
-from pipeline.prefect_flow import term_pipeline
-from termalign_step.run_termalign import run_termalign
-
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 def resolve_default_paths(data_dir: str) -> dict[str, str]:
     root = Path(data_dir)
@@ -37,6 +38,20 @@ def ensure_parent_dirs(*paths: str) -> None:
         Path(p).parent.mkdir(parents=True, exist_ok=True)
 
 
+def setup_run_logger(logs_dir: str, command: str) -> Path:
+    Path(logs_dir).mkdir(parents=True, exist_ok=True)
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    log_path = Path(logs_dir) / f"{command}-{ts}.log"
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(message)s",
+        handlers=[logging.FileHandler(log_path, encoding="utf-8"), logging.StreamHandler()],
+    )
+    logging.info("Log file initialized: %s", log_path)
+    return log_path
+
+
 def apply_data_defaults(args: argparse.Namespace) -> argparse.Namespace:
     defaults = resolve_default_paths(args.data_dir)
     for key, value in defaults.items():
@@ -50,6 +65,11 @@ def add_data_dir_arg(p: argparse.ArgumentParser) -> None:
         "--data-dir",
         default="data",
         help="Unified project data root (default: data). Expected layout: input/intermediate/output",
+    )
+    p.add_argument(
+        "--logs-dir",
+        default="logs",
+        help="Directory for run logs (default: logs)",
     )
 
 
@@ -129,9 +149,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_full(args: argparse.Namespace) -> str:
     args = apply_data_defaults(args)
+    setup_run_logger(args.logs_dir, "full")
     ensure_parent_dirs(args.bertalign_output, args.termalign_output, args.evaluation_output)
+    logging.info("Running full pipeline with data_dir=%s", args.data_dir)
 
     if args.use_prefect:
+        from pipeline.prefect_flow import term_pipeline
+        logging.info("Execution mode: prefect")
         return term_pipeline(
             source_file=args.source_file,
             target_file=args.target_file,
@@ -162,6 +186,10 @@ def run_full(args: argparse.Namespace) -> str:
             eval_top_k_variants=args.eval_top_k_variants,
         )
 
+    logging.info("Execution mode: sequential")
+    from bertalign_step.run_bertalign import run_bertalign
+    from termalign_step.run_termalign import run_termalign
+    from evaluation_step.evaluate_terms import evaluate_terms
     ba_out = run_bertalign(
         source_file=args.source_file,
         target_file=args.target_file,
@@ -205,12 +233,16 @@ def main() -> None:
 
     if args.command == "full":
         out = run_full(args)
+        logging.info("Full pipeline finished. Output: %s", out)
         print(out)
         return
 
     args = apply_data_defaults(args)
+    setup_run_logger(args.logs_dir, args.command)
+    logging.info("Running command=%s data_dir=%s", args.command, args.data_dir)
 
     if args.command == "bertalign":
+        from bertalign_step.run_bertalign import run_bertalign
         ensure_parent_dirs(args.bertalign_output)
         out = run_bertalign(
             source_file=args.source_file,
@@ -219,10 +251,12 @@ def main() -> None:
             external_command=args.bertalign_command,
             default_confidence=args.bertalign_default_confidence,
         )
+        logging.info("bertalign finished. Output: %s", out)
         print(out)
         return
 
     if args.command == "termalign":
+        from termalign_step.run_termalign import run_termalign
         ensure_parent_dirs(args.termalign_output)
         out = run_termalign(
             bertalign_output=args.bertalign_output,
@@ -240,10 +274,12 @@ def main() -> None:
             api_key=args.api_key,
             device=args.device,
         )
+        logging.info("termalign finished. Output: %s", out)
         print(out)
         return
 
     if args.command == "evaluation":
+        from evaluation_step.evaluate_terms import evaluate_terms
         ensure_parent_dirs(args.evaluation_output)
         out = evaluate_terms(
             termalign_output=args.termalign_output,
@@ -257,6 +293,7 @@ def main() -> None:
             normalize_entropy=args.eval_normalize_entropy,
             top_k_variants=args.eval_top_k_variants,
         )
+        logging.info("evaluation finished. Output: %s", out)
         print(out)
         return
 

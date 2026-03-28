@@ -4,7 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
+from pathlib import Path
 from prefect import flow, task
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from bertalign_step.run_bertalign import run_bertalign
 from evaluation_step.evaluate_terms import evaluate_terms
