@@ -59,6 +59,9 @@ def term_pipeline(
     api_endpoint: str | None = None,
     api_key: str | None = None,
     device: int = -1,
+    dict_zh_path: str | None = None,
+    dict_en_path: str | None = None,
+    skip_bert: bool = False,
     eval_min_confidence: float = 0.0,
     eval_confidence_field: str = "weighted_confidence",
     eval_count_field: str | None = None,
@@ -95,6 +98,9 @@ def term_pipeline(
         api_endpoint=api_endpoint,
         api_key=api_key,
         device=device,
+        dict_zh_path=dict_zh_path,
+        dict_en_path=dict_en_path,
+        skip_bert=skip_bert,
     ).result()
 
     ev_out = evaluation_task.submit(
@@ -142,6 +148,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--api-endpoint", default=None)
     p.add_argument("--api-key", default=None)
     p.add_argument("--device", type=int, default=-1)
+    p.add_argument("--dict-zh-path", default=None)
+    p.add_argument("--dict-en-path", default=None)
+    p.add_argument("--skip-bert", action="store_true")
 
     p.add_argument("--eval-min-confidence", type=float, default=0.0)
     p.add_argument("--eval-confidence-field", default="weighted_confidence")
@@ -181,6 +190,9 @@ def main() -> None:
         api_endpoint=args.api_endpoint,
         api_key=args.api_key,
         device=args.device,
+        dict_zh_path=args.dict_zh_path,
+        dict_en_path=args.dict_en_path,
+        skip_bert=args.skip_bert,
         eval_min_confidence=args.eval_min_confidence,
         eval_confidence_field=args.eval_confidence_field,
         eval_count_field=args.eval_count_field,

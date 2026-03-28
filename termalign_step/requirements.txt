@@ -1,3 +1,6 @@
 transformers>=4.46.0
 torch>=2.2.0
 requests>=2.32.0
+pandas>=2.2.0
+tqdm>=4.66.0
+opencc-python-reimplemented>=0.1.7

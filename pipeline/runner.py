@@ -106,6 +106,9 @@ def add_termalign_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--api-endpoint", default=None)
     p.add_argument("--api-key", default=None)
     p.add_argument("--device", type=int, default=-1)
+    p.add_argument("--dict-zh-path", default=None)
+    p.add_argument("--dict-en-path", default=None)
+    p.add_argument("--skip-bert", action="store_true")
 
 
 def add_eval_args(p: argparse.ArgumentParser) -> None:
@@ -187,6 +190,9 @@ def run_full(args: argparse.Namespace) -> str:
             api_endpoint=args.api_endpoint,
             api_key=args.api_key,
             device=args.device,
+            dict_zh_path=args.dict_zh_path,
+            dict_en_path=args.dict_en_path,
+            skip_bert=args.skip_bert,
             eval_min_confidence=args.eval_min_confidence,
             eval_confidence_field=args.eval_confidence_field,
             eval_count_field=args.eval_count_field,
@@ -227,6 +233,9 @@ def run_full(args: argparse.Namespace) -> str:
         api_endpoint=args.api_endpoint,
         api_key=args.api_key,
         device=args.device,
+        dict_zh_path=args.dict_zh_path,
+        dict_en_path=args.dict_en_path,
+        skip_bert=args.skip_bert,
     )
     return evaluate_terms(
         termalign_output=ta_out,
@@ -293,6 +302,9 @@ def main() -> None:
             api_endpoint=args.api_endpoint,
             api_key=args.api_key,
             device=args.device,
+            dict_zh_path=args.dict_zh_path,
+            dict_en_path=args.dict_en_path,
+            skip_bert=args.skip_bert,
         )
         logging.info("termalign finished. Output: %s", out)
         print(out)

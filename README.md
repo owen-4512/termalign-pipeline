@@ -135,6 +135,9 @@ python bertalign_step/batch_align.py \
 
 ### B. termalign 步骤（模型模式）
 
+`termalign_step/run_termalign.py` 现已对接你提供的完整 termalign 脚本体系（`align.py / extractors.py / io_utils.py / pipeline.py / cli.py`），执行流程是：  
+`bertalign.jsonl -> 中间 TSV(src_text/tgt_text) -> termalign pipeline -> alignments.tsv -> 输出 JSONL`。
+
 ```bash
 python termalign_step/run_termalign.py \
   --bertalign-output data/Task1/bertalign.jsonl \
@@ -143,11 +146,14 @@ python termalign_step/run_termalign.py \
   --aligner-model owen4512/minilm-finance-term-aligner \
   --zh-extractor-model owen4512/bert-base-chinese-finance-term-extractor \
   --en-extractor-model owen4512/bert-base-cased-finance-term-extractor \
-  --min-term-confidence 0.5 \
-  --min-pair-confidence 0.5
+  --min-pair-confidence 0.5 \
+  --dict-zh-path data/Task3/dict_zh.txt \
+  --dict-en-path data/Task3/dict_en.txt
 ```
 
 ### C. termalign 步骤（API 模式）
+
+你提供的 termalign 全量脚本不包含 API 提取分支，因此当前 `run_termalign.py` 在 `--extraction-mode api` 下会报错并提示改用模型模式。
 
 ```bash
 python termalign_step/run_termalign.py \
