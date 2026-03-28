@@ -13,4 +13,7 @@
 - `data/Task3/termalign_prompt.txt`：termalign API 模式 prompt 文本（可选）
 - `data/Task3/evaluation.json`：Task3（evaluation）输出
 
+补充：如果不传 termalign 的词典参数，termalign 子项目会自动尝试读取：  
+`termalign_step/term_list/zh_terms.txt` 与 `termalign_step/term_list/en_terms.txt`。
+
 `pipeline/runner.py` 默认按该布局读取/写入；你也可以通过 `--data-dir` 切换根目录，或显式传参数覆盖默认路径。

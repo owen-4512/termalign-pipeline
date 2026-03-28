@@ -148,6 +148,11 @@ python bertalign_step/batch_align.py \
 `termalign_step/run_termalign.py` 现已对接你提供的完整 termalign 脚本体系（`align.py / extractors.py / io_utils.py / pipeline.py / cli.py`），执行流程是：  
 `bertalign.jsonl -> 中间 TSV(src_text/tgt_text) -> termalign pipeline -> alignments.tsv -> 输出 JSONL`。
 
+另外，`termalign_step/term_list/` 下已提供默认术语表文件：  
+- `zh_terms.txt`（中文术语）  
+- `en_terms.txt`（英文术语）  
+如果 CLI 未传 `--dict-zh-path/--dict-en-path`（或 termalign 子项目 CLI 未传 `--dict-zh/--dict-en`），会自动读取这两个 txt 文件（若存在）。
+
 ```bash
 python termalign_step/run_termalign.py \
   --bertalign-output data/Task1/bertalign.jsonl \
@@ -156,9 +161,7 @@ python termalign_step/run_termalign.py \
   --aligner-model owen4512/minilm-finance-term-aligner \
   --zh-extractor-model owen4512/bert-base-chinese-finance-term-extractor \
   --en-extractor-model owen4512/bert-base-cased-finance-term-extractor \
-  --min-pair-confidence 0.5 \
-  --dict-zh-path data/Task3/dict_zh.txt \
-  --dict-en-path data/Task3/dict_en.txt
+  --min-pair-confidence 0.5
 ```
 
 ### C. termalign 步骤（API 模式）

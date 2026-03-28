@@ -12,6 +12,9 @@ from typing import Any
 HF_ZH_MODEL = "owen4512/bert-base-chinese-finance-term-extractor"
 HF_EN_MODEL = "owen4512/bert-base-cased-finance-term-extractor"
 HF_ALIGN_MODEL = "owen4512/minilm-finance-term-aligner"
+DEFAULT_TERM_LIST_DIR = Path(__file__).resolve().parent / "term_list"
+DEFAULT_ZH_TERM_LIST = DEFAULT_TERM_LIST_DIR / "zh_terms.txt"
+DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
 
 
 def _ensure_hf_models_downloaded() -> None:
@@ -35,6 +38,19 @@ def _jsonl_to_tsv(input_jsonl: Path, output_tsv: Path) -> str:
     output_tsv.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(output_tsv, sep="\t", index=False)
     return str(output_tsv)
+
+
+def _resolve_default_term_lists(
+    dict_zh_path: str | None,
+    dict_en_path: str | None,
+) -> tuple[str | None, str | None]:
+    zh = dict_zh_path
+    en = dict_en_path
+    if zh is None and DEFAULT_ZH_TERM_LIST.exists():
+        zh = str(DEFAULT_ZH_TERM_LIST)
+    if en is None and DEFAULT_EN_TERM_LIST.exists():
+        en = str(DEFAULT_EN_TERM_LIST)
+    return zh, en
 
 
 def _alignment_tsv_to_jsonl(align_tsv: Path, output_jsonl: Path, min_similarity: float, top_k_pairs: int) -> str:
@@ -118,6 +134,8 @@ def run_termalign(
         zh_extractor_model = HF_ZH_MODEL
         en_extractor_model = HF_EN_MODEL
         aligner_model = HF_ALIGN_MODEL
+
+    dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
 
     input_jsonl = Path(bertalign_output)
     output_jsonl = Path(output_file)
