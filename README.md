@@ -155,6 +155,20 @@ python bertalign_step/batch_align.py \
 `termalign_step/run_termalign.py` 现已对接你提供的完整 termalign 脚本体系（`align.py / extractors.py / io_utils.py / pipeline.py / cli.py`），执行流程是：  
 `bertalign.jsonl -> 中间 TSV(src_text/tgt_text) -> termalign pipeline -> 输出 terms/alignment 系列 TSV（含 high_conf）`。
 
+当 `--bertalign-output` 指向 **批量 bertalign 输出目录**（例如包含 `2016_01_zh_en_align.tsv`、`2016_02_zh_en_align.tsv` ...）时，
+termalign 会在 `--output-dir` 下输出：
+- 每个文件对应的中文术语：`<bertalign_stem>_terms_zh.tsv`
+- 每个文件对应的英文术语：`<bertalign_stem>_terms_en.tsv`
+- 每个文件对应的全部术语配对：`<bertalign_stem>_alignments.tsv`
+- 每个文件对应的高置信术语配对：`<bertalign_stem>_alignments_high_conf.tsv`
+- 以及总汇总文件：
+  - `all_terms_zh.tsv`
+  - `all_terms_en.tsv`
+  - `all_alignments.tsv`
+  - `all_alignments_high_conf.tsv`
+
+其中 `<bertalign_stem>` 直接来自 bertalign 文件名（例如 `2016_01_zh_en_align`）。
+
 另外，`termalign_step/term_list/` 下已提供默认术语表文件：  
 - `zh_terms.txt`（中文术语）  
 - `en_terms.txt`（英文术语）  
@@ -352,7 +366,8 @@ python pipeline/runner.py full \
 说明：
 - `--bertalign-batch-data-dir` 开启 batch bertalign；
 - batch 结果会作为目录输入直接传给 termalign；
-- termalign 会自动汇总多文件输出，evaluation 使用汇总结果打分并产出 `final_score`。
+- termalign 会输出“每文件结果 + 总汇总结果”（文件名前缀沿用 bertalign 输出文件名）；
+- evaluation 使用 `all_alignments_high_conf.tsv` 打分并产出 `final_score`。
 
 ### 总 pipeline CLI：termalign 模式示例
 
