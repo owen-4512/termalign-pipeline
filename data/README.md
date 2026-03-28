@@ -13,10 +13,10 @@
 - `data/Task3/<bertalign_stem>_alignments.tsv`：每个文件的全部术语配对（batch）
 - `data/Task3/<bertalign_stem>_alignments_high_conf.tsv`：每个文件的高置信术语配对（batch）
 - `data/Task3/all_alignments.tsv`：batch 全部术语配对汇总
-- `data/Task3/term_dict.json`：自定义术语词典
-- `data/Task3/dict_zh.txt`：termalign 中文术语词典（可选）
-- `data/Task3/dict_en.txt`：termalign 英文术语词典（可选）
-- `data/Task3/termalign_prompt.txt`：termalign API 模式 prompt 文本（可选）
+- `data/Task2/dict_zh.txt`：termalign 中文术语词典（可选）
+- `data/Task2/dict_en.txt`：termalign 英文术语词典（可选）
+- `data/Task2/termalign_prompt.txt`：termalign API 模式 prompt 文本（可选）
+- `data/Task3/proper_terms.jsonl`：evaluation 词典（键中文，值英文翻译）推荐输入
 - `data/results/evaluation_result.json`：evaluation 默认输出（pipeline CLI 未显式指定时）
 
 补充：如果不传 termalign 的词典参数，termalign 子项目会自动尝试读取：  

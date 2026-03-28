@@ -39,7 +39,7 @@ data/
 │  └─ bertalign.jsonl
 ├─ Task3/
 │  ├─ all_alignments_high_conf.tsv
-│  └─ term_dict.json
+│  └─ proper_terms.jsonl
 └─ results/
    └─ evaluation_result.json
 
@@ -208,7 +208,7 @@ python termalign_step/run_termalign.py \
 ```bash
 python evaluation_step/evaluate_terms.py \
   --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
-  --dictionary-path data/Task3/term_dict.json \
+  --dictionary-path data/Task3/proper_terms.jsonl \
   --output-file data/Task3/evaluation.json \
   --mode batch \
   --report-level both \
@@ -275,7 +275,7 @@ CLI 标准输出会打印精简 JSON，仅包含：
 python pipeline/prefect_flow.py \
   --source-file data/Task1/source.txt \
   --target-file data/Task1/target.txt \
-  --dictionary-path data/Task3/term_dict.json \
+  --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
@@ -293,7 +293,7 @@ Prefect 也支持在总流程中启用 batch bertalign（后续自动进入 term
 
 ```bash
 python pipeline/prefect_flow.py \
-  --dictionary-path data/Task3/term_dict.json \
+  --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
@@ -352,9 +352,9 @@ python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ..
 
 ### 在总 pipeline 中使用自定义中英术语表（termalign）
 
-推荐把术语表放在：
-- `data/Task3/dict_zh.txt`
-- `data/Task3/dict_en.txt`
+推荐把术语表放在（Task2）：
+- `data/Task2/dict_zh.txt`
+- `data/Task2/dict_en.txt`
 
 文件格式：每行一个术语（UTF-8 编码）。
 
@@ -362,20 +362,20 @@ python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ..
 
 ```bash
 python pipeline/runner.py full \
-  --dict-zh-path data/Task3/dict_zh.txt \
-  --dict-en-path data/Task3/dict_en.txt
+  --dict-zh-path data/Task2/dict_zh.txt \
+  --dict-en-path data/Task2/dict_en.txt
 ```
 
 如果你使用 Prefect 总流程，也可同样传入：
 
 ```bash
 python pipeline/prefect_flow.py \
-  --dictionary-path data/Task3/term_dict.json \
+  --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
-  --dict-zh-path data/Task3/dict_zh.txt \
-  --dict-en-path data/Task3/dict_en.txt
+  --dict-zh-path data/Task2/dict_zh.txt \
+  --dict-en-path data/Task2/dict_en.txt
 ```
 
 ### 总 pipeline 中使用 bertalign 批量模式
@@ -387,7 +387,7 @@ python pipeline/runner.py full \
   --bertalign-batch-data-dir data/Task1 \
   --bertalign-batch-output-dir data/Task2/batch_tsv \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
-  --dictionary-path data/Task3/term_dict.json \
+  --dictionary-path data/Task3/proper_terms.jsonl \
   --evaluation-output data/results/evaluation_result.json
 ```
 
@@ -424,7 +424,7 @@ python pipeline/runner.py full \
   --api-endpoint https://your-api/term-align \
   --api-key YOUR_KEY \
   --api-model gpt-4.1 \
-  --api-prompt-file data/Task3/termalign_prompt.txt
+  --api-prompt-file data/Task2/termalign_prompt.txt
 ```
 
 ---

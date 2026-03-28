@@ -28,8 +28,17 @@ def resolve_default_paths(data_dir: str) -> dict[str, str]:
         "target_file": str(root / "Task1" / "target.txt"),
         "bertalign_output": str(root / "Task2" / "bertalign.jsonl"),
         "termalign_output": str(root / "Task3" / "all_alignments_high_conf.tsv"),
-        "dictionary_path": str(root / "Task3" / "term_dict.json"),
+        "dictionary_path": str(root / "Task3" / "proper_terms.jsonl"),
         "evaluation_output": str(root / "results" / "evaluation_result.json"),
+    }
+
+
+def resolve_optional_paths(data_dir: str) -> dict[str, str]:
+    root = Path(data_dir)
+    return {
+        "dict_zh_path": str(root / "Task2" / "dict_zh.txt"),
+        "dict_en_path": str(root / "Task2" / "dict_en.txt"),
+        "api_prompt_file": str(root / "Task2" / "termalign_prompt.txt"),
     }
 
 
@@ -56,6 +65,10 @@ def apply_data_defaults(args: argparse.Namespace) -> argparse.Namespace:
     defaults = resolve_default_paths(args.data_dir)
     for key, value in defaults.items():
         if getattr(args, key, None) is None:
+            setattr(args, key, value)
+    optional_defaults = resolve_optional_paths(args.data_dir)
+    for key, value in optional_defaults.items():
+        if getattr(args, key, None) is None and Path(value).exists():
             setattr(args, key, value)
     return args
 
