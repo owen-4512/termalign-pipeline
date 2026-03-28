@@ -85,7 +85,11 @@ def evaluate_terms(
         )
 
     batch_score = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), dict) else {}
-    summary = {k: batch_score[k] for k in ("precision", "consistency", "final_score") if k in batch_score}
+    summary = {
+        "precision": batch_score.get("precision"),
+        "consistency": batch_score.get("consistency"),
+        "final_score": batch_score.get("final_score"),
+    }
     print(json.dumps(summary, ensure_ascii=False))
 
     out_path.parent.mkdir(parents=True, exist_ok=True)

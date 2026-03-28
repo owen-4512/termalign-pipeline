@@ -6,3 +6,8 @@
   - `debug_metrics.json`
   - `debug_metrics_sublogs/accuracy.json`
   - `debug_metrics_sublogs/consistency.json`
+
+`term_eval_pipeline.py` 的 CLI 标准输出会打印精简 JSON，仅包含：
+- `precision`
+- `consistency`
+- `final_score`

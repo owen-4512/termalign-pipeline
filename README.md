@@ -221,7 +221,27 @@ python evaluation_step/term_eval_pipeline.py \
   - `accuracy.json`
   - `consistency.json`
 
-CLI 标准输出会打印精简 JSON：`precision` / `consistency` / `final_score`。
+总 log `debug_metrics.json` 中会记录：
+- accuracy：每个术语 occurrence 的 `gold_candidates`、单项得分（`score`，范围 0~1）
+- consistency：统一分区；单文档时记录单文件术语明细，多文档时记录跨文件术语明细；多文档时 summary 额外含 `per_file_consistency_scores`
+- 额外元信息：`num_records`、`num_source_terms`、`selected_metrics` 等
+
+CLI 标准输出会打印精简 JSON，仅包含：
+- `precision`
+- `consistency`
+- `final_score`
+
+如果传入 `--output-json`，文件中会保存完整结果 JSON（含元信息、document/batch 结构等）。
+
+完整结果 JSON 会包含：
+- 元信息：`mode`, `report_level`, `metrics`, `alpha`, `beta`, `num_records`
+- 当 `report_level=batch|both`：`batch_score`
+- 当 `report_level=document|both`：`document_scores`（列表，每个元素对应一个 `source_file`）
+
+各 score 对象字段按选择指标动态出现，例如：
+- `precision`（accuracy）
+- `consistency`
+- `final_score`（仅当 `--metrics all`）
 
 ---
 

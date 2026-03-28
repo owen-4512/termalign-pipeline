@@ -38,7 +38,17 @@ def build_accuracy_debug(records: Iterable[Mapping[str, Any]], gold_map: Mapping
                 best_score = float(best_detail["score"])
                 total += 1
                 score_sum += best_score
-                details.append({"source_file": source_file, "zh_term": str(src_term), "occurrence_index": idx, "predicted_variant": str(variant), "score": best_score, "match_rule": best_detail["rule"]})
+                details.append(
+                    {
+                        "source_file": source_file,
+                        "zh_term": str(src_term),
+                        "occurrence_index": idx,
+                        "predicted_variant": str(variant),
+                        "gold_candidates": gold_refs,
+                        "score": best_score,
+                        "match_rule": best_detail["rule"],
+                    }
+                )
 
     precision = (score_sum / total) if total else 0.0
     return {"summary": {"score_sum": score_sum, "total_translation_occurrences": total, "skipped_terms_not_in_gold": len(skipped_terms), "precision": precision}, "occurrence_details": details, "skipped_terms": skipped_terms}

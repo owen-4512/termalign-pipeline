@@ -96,10 +96,25 @@ def run_evaluation(term_align_tsv: Path, gold_jsonl: Path, mode: str, metrics: I
         result["batch_score"] = _compute_metric_bundle(records, gold_map, token_map, selected_metrics, alpha, beta)
 
     if include_debug:
+        num_source_terms = 0
+        for record in records:
+            extracted_terms = record.get("extracted_terms", {})
+            if isinstance(extracted_terms, Mapping):
+                num_source_terms += len(extracted_terms)
         batch_scores = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), Mapping) else {}
         debug_info: Dict[str, Any] = {
-            "score_summary": {k: batch_scores[k] for k in ("precision", "consistency", "final_score") if k in batch_scores},
-            "meta": {"mode": mode, "report_level": report_level, "selected_metrics": selected_metrics, "num_records": len(records)},
+            "score_summary": {
+                "precision": batch_scores.get("precision"),
+                "consistency": batch_scores.get("consistency"),
+                "final_score": batch_scores.get("final_score"),
+            },
+            "meta": {
+                "mode": mode,
+                "report_level": report_level,
+                "selected_metrics": selected_metrics,
+                "num_records": len(records),
+                "num_source_terms": num_source_terms,
+            },
         }
         if "accuracy" in selected_metrics:
             debug_info["accuracy"] = build_accuracy_debug(records, gold_map)
