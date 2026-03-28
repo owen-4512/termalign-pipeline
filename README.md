@@ -68,6 +68,18 @@ logs/
 
 ## 单独运行各步骤
 
+### 0) 在 pipeline 中接入官方 Bertalign（根据官网文档）
+
+`bertalign` 官方 README 的基本方式是：`from bertalign import Bertalign`，初始化后执行 `align_sents()`（可选 `print_sents()`），并支持参数如 `max_align / top_k / win / skip / margin / len_penalty / is_split`。  
+在本项目中要稳定使用官方 bertalign，建议做这几件事：
+
+1. 安装 bertalign 及其依赖（本仓库已放到 `bertalign_step/requirements.txt`）：`bertalign`、`numba`、`faiss`、`sentence-transformers`、`sentence-splitter`、`googletrans`。  
+2. 准备 Task1 输入文件：`data/Task1/source.txt` 和 `data/Task1/target.txt`。  
+3. 如果你有自己的 bertalign 执行脚本（例如要显式传 `is_split=True` 或其他参数），在本项目里通过 `--external-command` 接入；命令可使用占位符 `{src}` `{tgt}` `{out}`。  
+4. 如果不传 `--external-command`，本项目会使用回退对齐逻辑（逐行 1-1），用于快速跑通 pipeline（但效果不等价于官方 bertalign）。
+
+---
+
 ### A. bertalign 步骤
 
 ```bash
