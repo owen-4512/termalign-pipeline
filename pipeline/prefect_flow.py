@@ -13,6 +13,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from bertalign_step.run_bertalign import run_bertalign
+from bertalign_step.batch_align import run_batch_alignment
 from evaluation_step.evaluate_terms import evaluate_terms
 from termalign_step.run_termalign import run_termalign
 
@@ -20,6 +21,32 @@ from termalign_step.run_termalign import run_termalign
 @task
 def bertalign_task(**kwargs: str) -> str:
     return run_bertalign(**kwargs)
+
+
+@task
+def bertalign_batch_task(
+    data_dir: str,
+    output_dir: str,
+    src_lang: str = "zh",
+    tgt_lang: str = "en",
+    max_align: int = 3,
+    top_k: int = 5,
+    win: int = 8,
+    strict: bool = False,
+) -> str:
+    code = run_batch_alignment(
+        data_dir=data_dir,
+        output_dir=output_dir,
+        src_lang=src_lang,
+        tgt_lang=tgt_lang,
+        max_align=max_align,
+        top_k=top_k,
+        win=win,
+        strict=strict,
+    )
+    if code != 0:
+        raise RuntimeError(f"Batch bertalign failed with exit code={code}")
+    return output_dir
 
 
 @task
@@ -47,6 +74,9 @@ def term_pipeline(
     bertalign_win: int = 8,
     bertalign_src_lang: str = "zh",
     bertalign_tgt_lang: str = "en",
+    bertalign_batch_data_dir: str | None = None,
+    bertalign_batch_output_dir: str | None = None,
+    bertalign_batch_strict: bool = False,
     extraction_mode: str = "model",
     termalign_mode: str = "hf",
     min_term_confidence: float = 0.5,
@@ -75,18 +105,31 @@ def term_pipeline(
     eval_debug_log: str | None = None,
     eval_debug_sublogs_dir: str | None = None,
 ) -> str:
-    ba_out = bertalign_task.submit(
-        source_file=source_file,
-        target_file=target_file,
-        output_file=bertalign_output,
-        external_command=bertalign_command,
-        default_confidence=bertalign_default_confidence,
-        max_align=bertalign_max_align,
-        top_k=bertalign_top_k,
-        win=bertalign_win,
-        src_lang=bertalign_src_lang,
-        tgt_lang=bertalign_tgt_lang,
-    ).result()
+    if bertalign_batch_data_dir:
+        batch_output_dir = bertalign_batch_output_dir or str(Path("data") / "Task1" / "batch_tsv")
+        ba_out = bertalign_batch_task.submit(
+            data_dir=bertalign_batch_data_dir,
+            output_dir=batch_output_dir,
+            src_lang=bertalign_src_lang,
+            tgt_lang=bertalign_tgt_lang,
+            max_align=bertalign_max_align,
+            top_k=bertalign_top_k,
+            win=bertalign_win,
+            strict=bertalign_batch_strict,
+        ).result()
+    else:
+        ba_out = bertalign_task.submit(
+            source_file=source_file,
+            target_file=target_file,
+            output_file=bertalign_output,
+            external_command=bertalign_command,
+            default_confidence=bertalign_default_confidence,
+            max_align=bertalign_max_align,
+            top_k=bertalign_top_k,
+            win=bertalign_win,
+            src_lang=bertalign_src_lang,
+            tgt_lang=bertalign_tgt_lang,
+        ).result()
 
     ta_out = termalign_task.submit(
         bertalign_output=ba_out,
@@ -145,6 +188,9 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--bertalign-win", type=int, default=8)
     p.add_argument("--bertalign-src-lang", default="zh")
     p.add_argument("--bertalign-tgt-lang", default="en")
+    p.add_argument("--bertalign-batch-data-dir", default=None)
+    p.add_argument("--bertalign-batch-output-dir", default=None)
+    p.add_argument("--bertalign-batch-strict", action="store_true")
 
     p.add_argument("--extraction-mode", choices=["model", "api"], default="model")
     p.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
@@ -193,6 +239,9 @@ def main() -> None:
         bertalign_win=args.bertalign_win,
         bertalign_src_lang=args.bertalign_src_lang,
         bertalign_tgt_lang=args.bertalign_tgt_lang,
+        bertalign_batch_data_dir=args.bertalign_batch_data_dir,
+        bertalign_batch_output_dir=args.bertalign_batch_output_dir,
+        bertalign_batch_strict=args.bertalign_batch_strict,
         extraction_mode=args.extraction_mode,
         termalign_mode=args.termalign_mode,
         min_term_confidence=args.min_term_confidence,

@@ -268,6 +268,25 @@ python pipeline/prefect_flow.py \
   --eval-debug-log evaluation_step/data/outputs/debug_metrics.json
 ```
 
+Prefect 也支持在总流程中启用 batch bertalign（后续自动进入 termalign + evaluation）：
+
+```bash
+python pipeline/prefect_flow.py \
+  --source-file data/Task1/source.txt \
+  --target-file data/Task1/target.txt \
+  --dictionary-path data/Task3/term_dict.json \
+  --bertalign-output data/Task1/bertalign.jsonl \
+  --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
+  --evaluation-output evaluation_step/data/outputs/evaluation_result.json \
+  --bertalign-batch-data-dir data/Task1 \
+  --bertalign-batch-output-dir data/Task1/batch_tsv \
+  --extraction-mode model \
+  --min-pair-confidence 0.5 \
+  --eval-mode batch \
+  --eval-report-level both \
+  --eval-metrics all
+```
+
 ### Prefect/runner 之外的一键 API 全流程脚本
 
 ```bash

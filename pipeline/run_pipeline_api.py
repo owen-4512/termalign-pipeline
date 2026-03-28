@@ -39,6 +39,9 @@ def main() -> None:
     parser.add_argument("--bertalign-win", type=int, default=8)
     parser.add_argument("--bertalign-src-lang", default="zh")
     parser.add_argument("--bertalign-tgt-lang", default="en")
+    parser.add_argument("--bertalign-batch-data-dir", default=None)
+    parser.add_argument("--bertalign-batch-output-dir", default=None)
+    parser.add_argument("--bertalign-batch-strict", action="store_true")
 
     parser.add_argument("--eval-mode", choices=["simple", "batch"], default="batch")
     parser.add_argument("--eval-target-txt", default=None)
