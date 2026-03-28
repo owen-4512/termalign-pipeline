@@ -86,6 +86,11 @@ def add_common_args(p: argparse.ArgumentParser) -> None:
 def add_bertalign_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--bertalign-command", default=None)
     p.add_argument("--bertalign-default-confidence", type=float, default=0.8)
+    p.add_argument("--bertalign-max-align", type=int, default=3)
+    p.add_argument("--bertalign-top-k", type=int, default=5)
+    p.add_argument("--bertalign-win", type=int, default=8)
+    p.add_argument("--bertalign-src-lang", default="zh")
+    p.add_argument("--bertalign-tgt-lang", default="en")
 
 
 def add_termalign_args(p: argparse.ArgumentParser) -> None:
@@ -164,7 +169,12 @@ def run_full(args: argparse.Namespace) -> str:
             termalign_output=args.termalign_output,
             evaluation_output=args.evaluation_output,
             bertalign_command=args.bertalign_command,
-            bertalign_default_confidence=args.bertalign_default_confidence,
+                bertalign_default_confidence=args.bertalign_default_confidence,
+                bertalign_max_align=args.bertalign_max_align,
+                bertalign_top_k=args.bertalign_top_k,
+                bertalign_win=args.bertalign_win,
+                bertalign_src_lang=args.bertalign_src_lang,
+                bertalign_tgt_lang=args.bertalign_tgt_lang,
             extraction_mode=args.extraction_mode,
             min_term_confidence=args.min_term_confidence,
             min_pair_confidence=args.min_pair_confidence,
@@ -196,6 +206,11 @@ def run_full(args: argparse.Namespace) -> str:
         output_file=args.bertalign_output,
         external_command=args.bertalign_command,
         default_confidence=args.bertalign_default_confidence,
+        max_align=args.bertalign_max_align,
+        top_k=args.bertalign_top_k,
+        win=args.bertalign_win,
+        src_lang=args.bertalign_src_lang,
+        tgt_lang=args.bertalign_tgt_lang,
     )
     ta_out = run_termalign(
         bertalign_output=ba_out,
@@ -250,6 +265,11 @@ def main() -> None:
             output_file=args.bertalign_output,
             external_command=args.bertalign_command,
             default_confidence=args.bertalign_default_confidence,
+            max_align=args.bertalign_max_align,
+            top_k=args.bertalign_top_k,
+            win=args.bertalign_win,
+            src_lang=args.bertalign_src_lang,
+            tgt_lang=args.bertalign_tgt_lang,
         )
         logging.info("bertalign finished. Output: %s", out)
         print(out)

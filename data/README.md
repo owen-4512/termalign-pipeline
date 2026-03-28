@@ -5,6 +5,7 @@
 - `data/Task1/source.txt`：源语言文本（每行一个句段）
 - `data/Task1/target.txt`：目标语言文本（每行一个句段）
 - `data/Task1/bertalign.jsonl`：Task1（bertalign）输出
+- `data/Task1/*_{lang}.txt`：如果使用批量对齐，文件名需满足 `YYYY_ID_lang.txt`
 - `data/Task2/termalign.jsonl`：Task2（termalign）输出
 - `data/Task3/term_dict.json`：自定义术语词典
 - `data/Task3/evaluation.json`：Task3（evaluation）输出

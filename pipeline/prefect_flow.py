@@ -42,6 +42,11 @@ def term_pipeline(
     evaluation_output: str,
     bertalign_command: str | None = None,
     bertalign_default_confidence: float = 0.8,
+    bertalign_max_align: int = 3,
+    bertalign_top_k: int = 5,
+    bertalign_win: int = 8,
+    bertalign_src_lang: str = "zh",
+    bertalign_tgt_lang: str = "en",
     extraction_mode: str = "model",
     min_term_confidence: float = 0.5,
     min_pair_confidence: float = 0.5,
@@ -68,6 +73,11 @@ def term_pipeline(
         output_file=bertalign_output,
         external_command=bertalign_command,
         default_confidence=bertalign_default_confidence,
+        max_align=bertalign_max_align,
+        top_k=bertalign_top_k,
+        win=bertalign_win,
+        src_lang=bertalign_src_lang,
+        tgt_lang=bertalign_tgt_lang,
     ).result()
 
     ta_out = termalign_task.submit(
@@ -114,6 +124,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--bertalign-command", default=None)
     p.add_argument("--bertalign-default-confidence", type=float, default=0.8)
+    p.add_argument("--bertalign-max-align", type=int, default=3)
+    p.add_argument("--bertalign-top-k", type=int, default=5)
+    p.add_argument("--bertalign-win", type=int, default=8)
+    p.add_argument("--bertalign-src-lang", default="zh")
+    p.add_argument("--bertalign-tgt-lang", default="en")
 
     p.add_argument("--extraction-mode", choices=["model", "api"], default="model")
     p.add_argument("--min-term-confidence", type=float, default=0.5)
@@ -149,6 +164,11 @@ def main() -> None:
         evaluation_output=args.evaluation_output,
         bertalign_command=args.bertalign_command,
         bertalign_default_confidence=args.bertalign_default_confidence,
+        bertalign_max_align=args.bertalign_max_align,
+        bertalign_top_k=args.bertalign_top_k,
+        bertalign_win=args.bertalign_win,
+        bertalign_src_lang=args.bertalign_src_lang,
+        bertalign_tgt_lang=args.bertalign_tgt_lang,
         extraction_mode=args.extraction_mode,
         min_term_confidence=args.min_term_confidence,
         min_pair_confidence=args.min_pair_confidence,

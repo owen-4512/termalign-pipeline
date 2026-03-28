@@ -77,17 +77,27 @@ logs/
 2. 准备 Task1 输入文件：`data/Task1/source.txt` 和 `data/Task1/target.txt`。  
 3. 如果你有自己的 bertalign 执行脚本（例如要显式传 `is_split=True` 或其他参数），在本项目里通过 `--external-command` 接入；命令可使用占位符 `{src}` `{tgt}` `{out}`。  
 4. 如果不传 `--external-command`，本项目会使用回退对齐逻辑（逐行 1-1），用于快速跑通 pipeline（但效果不等价于官方 bertalign）。
+5. 本仓库已内置两个可用脚本：  
+   - `bertalign_step/single_align.py`：单文件对齐  
+   - `bertalign_step/batch_align.py`：批量文件对齐（文件名模式 `YYYY_ID_lang.txt`）
 
 ---
 
 ### A. bertalign 步骤
+
+#### A1. 单文件（推荐给 pipeline）
 
 ```bash
 python bertalign_step/run_bertalign.py \
   --source-file data/Task1/source.txt \
   --target-file data/Task1/target.txt \
   --output-file data/Task1/bertalign.jsonl \
-  --default-confidence 0.85
+  --default-confidence 0.85 \
+  --max-align 3 \
+  --top-k 5 \
+  --win 8 \
+  --src-lang zh \
+  --tgt-lang en
 ```
 
 如果你希望强制使用官方 bertalign，可传入 `--external-command`，命令中支持占位符：`{src}` `{tgt}` `{out}`。
@@ -98,6 +108,29 @@ python bertalign_step/run_bertalign.py \
   --target-file data/Task1/target.txt \
   --output-file data/Task1/bertalign.jsonl \
   --external-command "python your_bertalign_runner.py --src {src} --tgt {tgt} --out {out}"
+```
+
+#### A2. 批量文件（使用你给的 batch 脚本逻辑）
+
+```bash
+python bertalign_step/run_bertalign.py \
+  --batch-data-dir data/Task1 \
+  --batch-output-dir data/Task1/batch_tsv \
+  --src-lang zh \
+  --tgt-lang en \
+  --max-align 3 \
+  --top-k 5 \
+  --win 8
+```
+
+或直接调用：
+
+```bash
+python bertalign_step/batch_align.py \
+  --data-dir data/Task1 \
+  --output-dir data/Task1/batch_tsv \
+  --src-lang zh \
+  --tgt-lang en
 ```
 
 ### B. termalign 步骤（模型模式）
