@@ -35,12 +35,13 @@ data/
 ├─ Task1/
 │  ├─ source.txt
 │  ├─ target.txt
-│  └─ bertalign.jsonl
 ├─ Task2/
-│  └─ termalign.jsonl
-└─ Task3/
-   ├─ term_dict.json
-   └─ evaluation.json
+│  └─ bertalign.jsonl
+├─ Task3/
+│  ├─ all_alignments_high_conf.tsv
+│  └─ term_dict.json
+└─ results/
+   └─ evaluation_result.json
 
 logs/
 └─ *.log
@@ -261,9 +262,9 @@ python pipeline/prefect_flow.py \
   --source-file data/Task1/source.txt \
   --target-file data/Task1/target.txt \
   --dictionary-path data/Task3/term_dict.json \
-  --bertalign-output data/Task1/bertalign.jsonl \
-  --termalign-output data/Task2/termalign.jsonl \
-  --evaluation-output data/Task3/evaluation.json \
+  --bertalign-output data/Task2/bertalign.jsonl \
+  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --evaluation-output data/results/evaluation_result.json \
   --extraction-mode model \
   --min-term-confidence 0.5 \
   --min-pair-confidence 0.5 \
@@ -281,9 +282,9 @@ python pipeline/prefect_flow.py \
   --source-file data/Task1/source.txt \
   --target-file data/Task1/target.txt \
   --dictionary-path data/Task3/term_dict.json \
-  --bertalign-output data/Task1/bertalign.jsonl \
-  --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
-  --evaluation-output evaluation_step/data/outputs/evaluation_result.json \
+  --bertalign-output data/Task2/bertalign.jsonl \
+  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --evaluation-output data/results/evaluation_result.json \
   --bertalign-batch-data-dir data/Task1 \
   --bertalign-batch-output-dir data/Task1/batch_tsv \
   --extraction-mode model \
@@ -310,7 +311,7 @@ python pipeline/run_pipeline_api.py \
 
 ```bash
 python pipeline/runner.py full
-# 默认读写 data/Task1, data/Task2, data/Task3
+# 默认读写 data/Task1, data/Task2, data/Task3, data/results
 ```
 
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
@@ -340,9 +341,9 @@ python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ..
 python pipeline/runner.py full \
   --bertalign-batch-data-dir data/Task1 \
   --bertalign-batch-output-dir data/Task1/batch_tsv \
-  --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
+  --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --dictionary-path data/Task3/term_dict.json \
-  --evaluation-output evaluation_step/data/outputs/evaluation_result.json
+  --evaluation-output data/results/evaluation_result.json
 ```
 
 说明：
