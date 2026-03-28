@@ -350,6 +350,34 @@ python pipeline/runner.py termalign --bertalign-output ... --termalign-output ..
 python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ... --evaluation-output ...
 ```
 
+### 在总 pipeline 中使用自定义中英术语表（termalign）
+
+推荐把术语表放在：
+- `data/Task3/dict_zh.txt`
+- `data/Task3/dict_en.txt`
+
+文件格式：每行一个术语（UTF-8 编码）。
+
+在总流程里显式传入：
+
+```bash
+python pipeline/runner.py full \
+  --dict-zh-path data/Task3/dict_zh.txt \
+  --dict-en-path data/Task3/dict_en.txt
+```
+
+如果你使用 Prefect 总流程，也可同样传入：
+
+```bash
+python pipeline/prefect_flow.py \
+  --dictionary-path data/Task3/term_dict.json \
+  --bertalign-output data/Task2/bertalign.jsonl \
+  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --evaluation-output data/results/evaluation_result.json \
+  --dict-zh-path data/Task3/dict_zh.txt \
+  --dict-en-path data/Task3/dict_en.txt
+```
+
 ### 总 pipeline 中使用 bertalign 批量模式
 
 如果 Task1 是一批 `*_zh.txt` / `*_en.txt` 文件（命名 `YYYY_ID_lang.txt`），可直接在总 pipeline 里开启 batch bertalign：
