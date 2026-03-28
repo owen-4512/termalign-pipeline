@@ -128,6 +128,33 @@ python pipeline/prefect_flow.py \
 
 ---
 
+
+## 额外统一入口（pipeline runner）
+
+如果你希望通过**一个脚本**来运行全流程或任意子步骤，可使用：
+
+```bash
+python pipeline/runner.py full \
+  --source-file data/source.txt \
+  --target-file data/target.txt \
+  --dictionary-path data/term_dict.json \
+  --bertalign-output outputs/bertalign.jsonl \
+  --termalign-output outputs/termalign.jsonl \
+  --evaluation-output outputs/evaluation.json
+```
+
+- 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
+- 如果想强制走 Prefect 编排，可加 `--use-prefect`。
+- 也可以单独跑子命令：
+
+```bash
+python pipeline/runner.py bertalign --source-file ... --target-file ... --bertalign-output ...
+python pipeline/runner.py termalign --bertalign-output ... --termalign-output ...
+python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ... --evaluation-output ...
+```
+
+---
+
 ## 可调参数（重点）
 
 - 路径参数：输入、各阶段输出路径
