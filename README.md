@@ -143,8 +143,11 @@ python bertalign_step/batch_align.py \
   --tgt-lang en
 ```
 
-批量输出文件名格式为：`YYYY_MM_zh_en_align.tsv`（例如 `2016_01_zh_en_align.tsv`）。
-当输入中的 `ID` 是数字时会自动补齐到至少两位（`1 -> 01`）。
+批量输出文件名会跟随输入文件名的基名：
+- 输入：`2016_01_zh.txt` + `2016_01_en.txt`
+- 输出：`2016_01_zh_en_align.tsv`
+
+通用规则：对于任意 `<base>_{src_lang}.txt` 与 `<base>_{tgt_lang}.txt` 配对，输出为 `<base>_{src_lang}_{tgt_lang}_align.tsv`。
 
 ### B. termalign 步骤（模型模式）
 

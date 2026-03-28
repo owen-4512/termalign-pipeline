@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import re
 import sys
 from pathlib import Path
 
@@ -15,14 +14,16 @@ if str(PROJECT_ROOT) not in sys.path:
 from bertalign_step.single_align import run_alignment
 
 
-def _normalize_file_id(file_id: str) -> str:
-    """Normalize pair id to a stable two-digit form for output naming."""
-    return file_id.zfill(2) if file_id.isdigit() else file_id
+def _source_base_name(path: Path, src_lang: str) -> str | None:
+    suffix = f"_{src_lang}.txt"
+    if not path.name.endswith(suffix):
+        return None
+    return path.name[: -len(suffix)]
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Batch sentence alignment based on filename pattern YYYY_ID_lang.txt"
+        description="Batch sentence alignment based on source/target filename pairs."
     )
 
     parser.add_argument("--data-dir", type=Path, required=True)
@@ -57,7 +58,6 @@ def run_batch_alignment(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    pattern = re.compile(rf"^(?P<prefix>\d{{4}})_(?P<id>\d+)_{re.escape(src_lang)}\.txt$")
     src_files = sorted(data_dir.glob(f"*_{src_lang}.txt"))
 
     if not src_files:
@@ -68,19 +68,16 @@ def run_batch_alignment(
     skipped = 0
 
     for src_file in src_files:
-        m = pattern.match(src_file.name)
-        if not m:
-            print(f"⚠️ Skipped (invalid name): {src_file.name}")
+        base_name = _source_base_name(src_file, src_lang)
+        if not base_name:
+            print(f"⚠️ Skipped (invalid source name): {src_file.name}")
             skipped += 1
             if strict:
                 return 2
             continue
 
-        prefix = m.group("prefix")
-        file_id = m.group("id")
-
-        tgt_file = data_dir / f"{prefix}_{file_id}_{tgt_lang}.txt"
-        out_file = output_dir / f"{prefix}_{_normalize_file_id(file_id)}_{src_lang}_{tgt_lang}_align.tsv"
+        tgt_file = data_dir / f"{base_name}_{tgt_lang}.txt"
+        out_file = output_dir / f"{base_name}_{src_lang}_{tgt_lang}_align.tsv"
 
         if not tgt_file.exists():
             print(f"⚠️ Missing target file: {tgt_file.name}")
@@ -89,7 +86,7 @@ def run_batch_alignment(
                 return 3
             continue
 
-        print(f"🚀 Aligning {prefix}_{file_id} ...")
+        print(f"🚀 Aligning {base_name} ...")
         run_alignment(
             src=src_file,
             tgt=tgt_file,
