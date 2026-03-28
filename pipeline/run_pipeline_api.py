@@ -40,13 +40,15 @@ def main() -> None:
     parser.add_argument("--bertalign-src-lang", default="zh")
     parser.add_argument("--bertalign-tgt-lang", default="en")
 
-    parser.add_argument("--eval-min-confidence", type=float, default=0.0)
-    parser.add_argument("--eval-confidence-field", default="weighted_confidence")
-    parser.add_argument("--eval-count-field", default=None)
-    parser.add_argument("--eval-smoothing-alpha", type=float, default=0.0)
-    parser.add_argument("--eval-entropy-base", type=float, default=2.0)
-    parser.add_argument("--eval-normalize-entropy", action="store_true")
-    parser.add_argument("--eval-top-k-variants", type=int, default=None)
+    parser.add_argument("--eval-mode", choices=["simple", "batch"], default="batch")
+    parser.add_argument("--eval-target-txt", default=None)
+    parser.add_argument("--eval-target-dir", default=None)
+    parser.add_argument("--eval-report-level", choices=["document", "batch", "both"], default="batch")
+    parser.add_argument("--eval-metrics", nargs="+", default=["all"])
+    parser.add_argument("--eval-alpha", type=float, default=0.2)
+    parser.add_argument("--eval-beta", type=float, default=0.0)
+    parser.add_argument("--eval-debug-log", default=None)
+    parser.add_argument("--eval-debug-sublogs-dir", default=None)
 
     args = parser.parse_args()
 

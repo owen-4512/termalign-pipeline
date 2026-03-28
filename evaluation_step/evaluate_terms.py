@@ -43,18 +43,16 @@ def evaluate_terms(
     termalign_output: str,
     dictionary_path: str,
     output_file: str,
-    min_confidence: float = 0.0,
-    confidence_field: str = "weighted_confidence",
-    count_field: str | None = None,
-    smoothing_alpha: float = 0.5,
-    entropy_base: float = 2.0,
-    normalize_entropy: bool = False,
-    top_k_variants: int | None = None,
+    mode: str = "batch",
+    target_txt: str | None = None,
+    target_dir: str | None = None,
+    report_level: str = "batch",
+    metrics: list[str] | None = None,
+    alpha: float = 0.2,
+    beta: float = 0.0,
     debug_log: str | None = None,
     debug_sublogs_dir: str | None = None,
 ) -> str:
-    del min_confidence, confidence_field, count_field, entropy_base, normalize_entropy, top_k_variants
-
     termalign_input = Path(termalign_output)
     dict_json = Path(dictionary_path)
     out_path = Path(output_file)
@@ -76,12 +74,15 @@ def evaluate_terms(
         result = run_evaluation(
             term_align_tsv=termalign_tsv,
             gold_jsonl=gold_jsonl,
-            mode="batch",
-            metrics=["all"],
-            alpha=smoothing_alpha,
-            beta=0.0,
-            report_level="batch",
+            mode=mode,
+            metrics=metrics or ["all"],
+            alpha=alpha,
+            beta=beta,
+            target_txt=Path(target_txt) if target_txt else None,
+            target_dir=Path(target_dir) if target_dir else None,
+            report_level=report_level,
             include_debug=True,
+            include_cross_document_consistency=True,
         )
 
     batch_score = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), dict) else {}
@@ -121,13 +122,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--termalign-output", required=True)
     parser.add_argument("--dictionary-path", required=True)
     parser.add_argument("--output-file", required=True)
-    parser.add_argument("--min-confidence", type=float, default=0.0)
-    parser.add_argument("--confidence-field", default="weighted_confidence")
-    parser.add_argument("--count-field", default=None)
-    parser.add_argument("--smoothing-alpha", type=float, default=0.5)
-    parser.add_argument("--entropy-base", type=float, default=2.0)
-    parser.add_argument("--normalize-entropy", action="store_true")
-    parser.add_argument("--top-k-variants", type=int, default=None)
+    parser.add_argument("--mode", choices=["simple", "batch"], default="batch")
+    parser.add_argument("--target-txt", default=None)
+    parser.add_argument("--target-dir", default=None)
+    parser.add_argument("--report-level", choices=["document", "batch", "both"], default="batch")
+    parser.add_argument("--metrics", nargs="+", default=["all"])
+    parser.add_argument("--alpha", type=float, default=0.2)
+    parser.add_argument("--beta", type=float, default=0.0)
     parser.add_argument("--debug-log", default=None)
     parser.add_argument("--debug-sublogs-dir", default=None)
     return parser
@@ -139,13 +140,13 @@ def main() -> None:
         termalign_output=args.termalign_output,
         dictionary_path=args.dictionary_path,
         output_file=args.output_file,
-        min_confidence=args.min_confidence,
-        confidence_field=args.confidence_field,
-        count_field=args.count_field,
-        smoothing_alpha=args.smoothing_alpha,
-        entropy_base=args.entropy_base,
-        normalize_entropy=args.normalize_entropy,
-        top_k_variants=args.top_k_variants,
+        mode=args.mode,
+        target_txt=args.target_txt,
+        target_dir=args.target_dir,
+        report_level=args.report_level,
+        metrics=args.metrics,
+        alpha=args.alpha,
+        beta=args.beta,
         debug_log=args.debug_log,
         debug_sublogs_dir=args.debug_sublogs_dir,
     )

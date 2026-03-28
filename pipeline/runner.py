@@ -115,13 +115,15 @@ def add_termalign_args(p: argparse.ArgumentParser) -> None:
 
 
 def add_eval_args(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--eval-min-confidence", type=float, default=0.0)
-    p.add_argument("--eval-confidence-field", default="weighted_confidence")
-    p.add_argument("--eval-count-field", default=None)
-    p.add_argument("--eval-smoothing-alpha", type=float, default=0.0)
-    p.add_argument("--eval-entropy-base", type=float, default=2.0)
-    p.add_argument("--eval-normalize-entropy", action="store_true")
-    p.add_argument("--eval-top-k-variants", type=int, default=None)
+    p.add_argument("--eval-mode", choices=["simple", "batch"], default="batch")
+    p.add_argument("--eval-target-txt", default=None)
+    p.add_argument("--eval-target-dir", default=None)
+    p.add_argument("--eval-report-level", choices=["document", "batch", "both"], default="batch")
+    p.add_argument("--eval-metrics", nargs="+", default=["all"])
+    p.add_argument("--eval-alpha", type=float, default=0.2)
+    p.add_argument("--eval-beta", type=float, default=0.0)
+    p.add_argument("--eval-debug-log", default=None)
+    p.add_argument("--eval-debug-sublogs-dir", default=None)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -199,13 +201,15 @@ def run_full(args: argparse.Namespace) -> str:
             dict_zh_path=args.dict_zh_path,
             dict_en_path=args.dict_en_path,
             skip_bert=args.skip_bert,
-            eval_min_confidence=args.eval_min_confidence,
-            eval_confidence_field=args.eval_confidence_field,
-            eval_count_field=args.eval_count_field,
-            eval_smoothing_alpha=args.eval_smoothing_alpha,
-            eval_entropy_base=args.eval_entropy_base,
-            eval_normalize_entropy=args.eval_normalize_entropy,
-            eval_top_k_variants=args.eval_top_k_variants,
+            eval_mode=args.eval_mode,
+            eval_target_txt=args.eval_target_txt,
+            eval_target_dir=args.eval_target_dir,
+            eval_report_level=args.eval_report_level,
+            eval_metrics=args.eval_metrics,
+            eval_alpha=args.eval_alpha,
+            eval_beta=args.eval_beta,
+            eval_debug_log=args.eval_debug_log,
+            eval_debug_sublogs_dir=args.eval_debug_sublogs_dir,
         )
 
     logging.info("Execution mode: sequential")
@@ -250,13 +254,15 @@ def run_full(args: argparse.Namespace) -> str:
         termalign_output=ta_out,
         dictionary_path=args.dictionary_path,
         output_file=args.evaluation_output,
-        min_confidence=args.eval_min_confidence,
-        confidence_field=args.eval_confidence_field,
-        count_field=args.eval_count_field,
-        smoothing_alpha=args.eval_smoothing_alpha,
-        entropy_base=args.eval_entropy_base,
-        normalize_entropy=args.eval_normalize_entropy,
-        top_k_variants=args.eval_top_k_variants,
+        mode=args.eval_mode,
+        target_txt=args.eval_target_txt,
+        target_dir=args.eval_target_dir,
+        report_level=args.eval_report_level,
+        metrics=args.eval_metrics,
+        alpha=args.eval_alpha,
+        beta=args.eval_beta,
+        debug_log=args.eval_debug_log,
+        debug_sublogs_dir=args.eval_debug_sublogs_dir,
     )
 
 
@@ -329,13 +335,15 @@ def main() -> None:
             termalign_output=args.termalign_output,
             dictionary_path=args.dictionary_path,
             output_file=args.evaluation_output,
-            min_confidence=args.eval_min_confidence,
-            confidence_field=args.eval_confidence_field,
-            count_field=args.eval_count_field,
-            smoothing_alpha=args.eval_smoothing_alpha,
-            entropy_base=args.eval_entropy_base,
-            normalize_entropy=args.eval_normalize_entropy,
-            top_k_variants=args.eval_top_k_variants,
+            mode=args.eval_mode,
+            target_txt=args.eval_target_txt,
+            target_dir=args.eval_target_dir,
+            report_level=args.eval_report_level,
+            metrics=args.eval_metrics,
+            alpha=args.eval_alpha,
+            beta=args.eval_beta,
+            debug_log=args.eval_debug_log,
+            debug_sublogs_dir=args.eval_debug_sublogs_dir,
         )
         logging.info("evaluation finished. Output: %s", out)
         print(out)

@@ -189,9 +189,11 @@ python evaluation_step/evaluate_terms.py \
   --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
   --dictionary-path data/Task3/term_dict.json \
   --output-file data/Task3/evaluation.json \
-  --min-confidence 0.4 \
-  --smoothing-alpha 0.1 \
-  --normalize-entropy
+  --mode batch \
+  --report-level both \
+  --metrics all \
+  --alpha 0.2 \
+  --debug-log evaluation_step/data/outputs/debug_metrics.json
 ```
 
 核心加权逻辑：
@@ -258,9 +260,11 @@ python pipeline/prefect_flow.py \
   --extraction-mode model \
   --min-term-confidence 0.5 \
   --min-pair-confidence 0.5 \
-  --eval-min-confidence 0.4 \
-  --eval-smoothing-alpha 0.1 \
-  --eval-normalize-entropy
+  --eval-mode batch \
+  --eval-report-level both \
+  --eval-metrics all \
+  --eval-alpha 0.2 \
+  --eval-debug-log evaluation_step/data/outputs/debug_metrics.json
 ```
 
 ### Prefect/runner 之外的一键 API 全流程脚本
@@ -340,8 +344,8 @@ python pipeline/runner.py full \
 - 术语抽取方式：`--extraction-mode model|api`
 - 术语抽取阈值：`--min-term-confidence`
 - 术语配对阈值：`--min-pair-confidence`
-- 统计阈值：`--eval-min-confidence`
-- 加权字段：`--eval-confidence-field`、`--eval-count-field`
-- 熵参数：`--eval-entropy-base`、`--eval-normalize-entropy`
-- 可选平滑：`--eval-smoothing-alpha`
-- 统计截断：`--eval-top-k-variants`
+- 评估模式：`--eval-mode simple|batch`
+- 输出粒度：`--eval-report-level document|batch|both`
+- 指标选择：`--eval-metrics all|accuracy|consistency`
+- 最终分数组合权重：`--eval-alpha`（`final_score = (1-alpha)*precision + alpha*consistency`）
+- debug 输出：`--eval-debug-log`、`--eval-debug-sublogs-dir`

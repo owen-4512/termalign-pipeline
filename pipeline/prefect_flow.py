@@ -65,13 +65,15 @@ def term_pipeline(
     dict_zh_path: str | None = None,
     dict_en_path: str | None = None,
     skip_bert: bool = False,
-    eval_min_confidence: float = 0.0,
-    eval_confidence_field: str = "weighted_confidence",
-    eval_count_field: str | None = None,
-    eval_smoothing_alpha: float = 0.0,
-    eval_entropy_base: float = 2.0,
-    eval_normalize_entropy: bool = False,
-    eval_top_k_variants: int | None = None,
+    eval_mode: str = "batch",
+    eval_target_txt: str | None = None,
+    eval_target_dir: str | None = None,
+    eval_report_level: str = "batch",
+    eval_metrics: list[str] | None = None,
+    eval_alpha: float = 0.2,
+    eval_beta: float = 0.0,
+    eval_debug_log: str | None = None,
+    eval_debug_sublogs_dir: str | None = None,
 ) -> str:
     ba_out = bertalign_task.submit(
         source_file=source_file,
@@ -113,13 +115,15 @@ def term_pipeline(
         termalign_output=ta_out,
         dictionary_path=dictionary_path,
         output_file=evaluation_output,
-        min_confidence=eval_min_confidence,
-        confidence_field=eval_confidence_field,
-        count_field=eval_count_field,
-        smoothing_alpha=eval_smoothing_alpha,
-        entropy_base=eval_entropy_base,
-        normalize_entropy=eval_normalize_entropy,
-        top_k_variants=eval_top_k_variants,
+        mode=eval_mode,
+        target_txt=eval_target_txt,
+        target_dir=eval_target_dir,
+        report_level=eval_report_level,
+        metrics=eval_metrics,
+        alpha=eval_alpha,
+        beta=eval_beta,
+        debug_log=eval_debug_log,
+        debug_sublogs_dir=eval_debug_sublogs_dir,
     ).result()
 
     return ev_out
@@ -161,13 +165,15 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--dict-en-path", default=None)
     p.add_argument("--skip-bert", action="store_true")
 
-    p.add_argument("--eval-min-confidence", type=float, default=0.0)
-    p.add_argument("--eval-confidence-field", default="weighted_confidence")
-    p.add_argument("--eval-count-field", default=None)
-    p.add_argument("--eval-smoothing-alpha", type=float, default=0.0)
-    p.add_argument("--eval-entropy-base", type=float, default=2.0)
-    p.add_argument("--eval-normalize-entropy", action="store_true")
-    p.add_argument("--eval-top-k-variants", type=int, default=None)
+    p.add_argument("--eval-mode", choices=["simple", "batch"], default="batch")
+    p.add_argument("--eval-target-txt", default=None)
+    p.add_argument("--eval-target-dir", default=None)
+    p.add_argument("--eval-report-level", choices=["document", "batch", "both"], default="batch")
+    p.add_argument("--eval-metrics", nargs="+", default=["all"])
+    p.add_argument("--eval-alpha", type=float, default=0.2)
+    p.add_argument("--eval-beta", type=float, default=0.0)
+    p.add_argument("--eval-debug-log", default=None)
+    p.add_argument("--eval-debug-sublogs-dir", default=None)
     return p
 
 
@@ -205,13 +211,15 @@ def main() -> None:
         dict_zh_path=args.dict_zh_path,
         dict_en_path=args.dict_en_path,
         skip_bert=args.skip_bert,
-        eval_min_confidence=args.eval_min_confidence,
-        eval_confidence_field=args.eval_confidence_field,
-        eval_count_field=args.eval_count_field,
-        eval_smoothing_alpha=args.eval_smoothing_alpha,
-        eval_entropy_base=args.eval_entropy_base,
-        eval_normalize_entropy=args.eval_normalize_entropy,
-        eval_top_k_variants=args.eval_top_k_variants,
+        eval_mode=args.eval_mode,
+        eval_target_txt=args.eval_target_txt,
+        eval_target_dir=args.eval_target_dir,
+        eval_report_level=args.eval_report_level,
+        eval_metrics=args.eval_metrics,
+        eval_alpha=args.eval_alpha,
+        eval_beta=args.eval_beta,
+        eval_debug_log=args.eval_debug_log,
+        eval_debug_sublogs_dir=args.eval_debug_sublogs_dir,
     )
 
 
