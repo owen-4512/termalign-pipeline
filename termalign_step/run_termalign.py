@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -86,6 +87,7 @@ def _alignment_tsv_to_jsonl(align_tsv: Path, output_jsonl: Path, min_similarity:
 def run_termalign(
     bertalign_output: str,
     output_file: str,
+    output_dir: str | None = None,
     extraction_mode: str = "model",
     termalign_mode: str = "hf",
     min_term_confidence: float = 0.5,
@@ -138,14 +140,15 @@ def run_termalign(
     dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
 
     input_jsonl = Path(bertalign_output)
-    output_jsonl = Path(output_file)
+    output_path = Path(output_file)
 
     with tempfile.TemporaryDirectory(prefix="termalign-") as tmpdir:
         from termalign_step.termalign_pipeline.pipeline import run_pipeline
 
         tmpdir_path = Path(tmpdir)
         input_tsv = tmpdir_path / "bertalign_input.tsv"
-        output_dir = tmpdir_path / "termalign_output"
+        actual_output_dir = Path(output_dir) if output_dir else output_path.parent
+        actual_output_dir.mkdir(parents=True, exist_ok=True)
 
         _jsonl_to_tsv(input_jsonl, input_tsv)
 
@@ -157,26 +160,29 @@ def run_termalign(
             bert_model_en=en_extractor_model,
             embed_model=aligner_model,
             similarity_threshold=min_pair_confidence,
-            output_dir=output_dir,
+            output_dir=actual_output_dir,
             skip_bert=skip_bert,
         )
 
-        align_tsv = output_dir / "alignments.tsv"
-        if not align_tsv.exists():
-            align_tsv = output_dir / "all_alignments.tsv"
+        preferred = actual_output_dir / "all_alignments_high_conf.tsv"
+        if not preferred.exists():
+            preferred = actual_output_dir / "alignments_high_conf.tsv"
+        if not preferred.exists():
+            preferred = actual_output_dir / "all_alignments.tsv"
+        if not preferred.exists():
+            preferred = actual_output_dir / "alignments.tsv"
 
-        return _alignment_tsv_to_jsonl(
-            align_tsv=align_tsv,
-            output_jsonl=output_jsonl,
-            min_similarity=min_pair_confidence,
-            top_k_pairs=top_k_pairs,
-        )
+        if preferred != output_path:
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(preferred, output_path)
+        return str(output_path)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TermAlign step")
     parser.add_argument("--bertalign-output", required=True)
     parser.add_argument("--output-file", required=True)
+    parser.add_argument("--output-dir", default=str(Path(__file__).resolve().parent / "data" / "outputs"))
     parser.add_argument("--extraction-mode", choices=["model", "api"], default="model")
     parser.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
     parser.add_argument("--min-term-confidence", type=float, default=0.5)
@@ -203,6 +209,7 @@ def main() -> None:
     run_termalign(
         bertalign_output=args.bertalign_output,
         output_file=args.output_file,
+        output_dir=args.output_dir,
         extraction_mode=args.extraction_mode,
         termalign_mode=args.termalign_mode,
         min_term_confidence=args.min_term_confidence,

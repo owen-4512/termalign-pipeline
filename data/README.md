@@ -6,7 +6,7 @@
 - `data/Task1/target.txt`：目标语言文本（每行一个句段）
 - `data/Task1/bertalign.jsonl`：Task1（bertalign）输出
 - `data/Task1/*_{lang}.txt`：如果使用批量对齐，文件名需满足 `YYYY_ID_lang.txt`
-- `data/Task2/termalign.jsonl`：Task2（termalign）输出
+- `termalign_step/data/outputs/all_alignments_high_conf.tsv`：Task2（termalign）推荐输出（供 evaluation 直接输入）
 - `data/Task3/term_dict.json`：自定义术语词典
 - `data/Task3/dict_zh.txt`：termalign 中文术语词典（可选）
 - `data/Task3/dict_en.txt`：termalign 英文术语词典（可选）

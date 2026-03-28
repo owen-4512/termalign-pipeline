@@ -18,6 +18,7 @@ Expected API response schema (per segment pair):
 from __future__ import annotations
 
 import argparse
+import csv
 import json
 from pathlib import Path
 from typing import Any
@@ -90,9 +91,41 @@ def run_termalign_api(
     if top_k_pairs > 0:
         all_pairs = all_pairs[:top_k_pairs]
 
-    with out_path.open("w", encoding="utf-8") as f:
-        for item in all_pairs:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+    if out_path.suffix.lower() == ".tsv":
+        fieldnames = [
+            "source_file",
+            "zh_term",
+            "en_term",
+            "similarity",
+            "zh_source",
+            "en_source",
+            "zh_confidence",
+            "en_confidence",
+            "zh_sentence",
+            "en_sentence",
+        ]
+        with out_path.open("w", encoding="utf-8", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t")
+            writer.writeheader()
+            for item in all_pairs:
+                writer.writerow(
+                    {
+                        "source_file": "__default__",
+                        "zh_term": item.get("source_term", ""),
+                        "en_term": item.get("target_term", ""),
+                        "similarity": item.get("weighted_confidence", 0.0),
+                        "zh_source": "api",
+                        "en_source": "api",
+                        "zh_confidence": "",
+                        "en_confidence": "",
+                        "zh_sentence": item.get("source_sentence", ""),
+                        "en_sentence": item.get("target_sentence", ""),
+                    }
+                )
+    else:
+        with out_path.open("w", encoding="utf-8") as f:
+            for item in all_pairs:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
     return str(out_path)
 
 

@@ -146,7 +146,7 @@ python bertalign_step/batch_align.py \
 ### B. termalign 步骤（模型模式）
 
 `termalign_step/run_termalign.py` 现已对接你提供的完整 termalign 脚本体系（`align.py / extractors.py / io_utils.py / pipeline.py / cli.py`），执行流程是：  
-`bertalign.jsonl -> 中间 TSV(src_text/tgt_text) -> termalign pipeline -> alignments.tsv -> 输出 JSONL`。
+`bertalign.jsonl -> 中间 TSV(src_text/tgt_text) -> termalign pipeline -> 输出 terms/alignment 系列 TSV（含 high_conf）`。
 
 另外，`termalign_step/term_list/` 下已提供默认术语表文件：  
 - `zh_terms.txt`（中文术语）  
@@ -156,7 +156,8 @@ python bertalign_step/batch_align.py \
 ```bash
 python termalign_step/run_termalign.py \
   --bertalign-output data/Task1/bertalign.jsonl \
-  --output-file data/Task2/termalign.jsonl \
+  --output-file termalign_step/data/outputs/all_alignments_high_conf.tsv \
+  --output-dir termalign_step/data/outputs \
   --extraction-mode model \
   --aligner-model owen4512/minilm-finance-term-aligner \
   --zh-extractor-model owen4512/bert-base-chinese-finance-term-extractor \
@@ -181,9 +182,11 @@ python termalign_step/run_termalign.py \
 
 `evaluation_step/evaluate_terms.py` 现已对接 evaluation 全量脚本（`evaluation_pipeline/*`），会自动把当前 pipeline 的输入转成 evaluation 所需格式后计算 `accuracy + consistency + final_score`（并输出 debug 信息）。
 
+如果 `termalign` 已输出 `all_alignments_high_conf.tsv`，evaluation 可以直接使用这个文件作为输入。
+
 ```bash
 python evaluation_step/evaluate_terms.py \
-  --termalign-output data/Task2/termalign.jsonl \
+  --termalign-output termalign_step/data/outputs/all_alignments_high_conf.tsv \
   --dictionary-path data/Task3/term_dict.json \
   --output-file data/Task3/evaluation.json \
   --min-confidence 0.4 \

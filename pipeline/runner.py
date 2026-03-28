@@ -27,7 +27,7 @@ def resolve_default_paths(data_dir: str) -> dict[str, str]:
         "source_file": str(root / "Task1" / "source.txt"),
         "target_file": str(root / "Task1" / "target.txt"),
         "bertalign_output": str(root / "Task1" / "bertalign.jsonl"),
-        "termalign_output": str(root / "Task2" / "termalign.jsonl"),
+        "termalign_output": str(Path("termalign_step") / "data" / "outputs" / "all_alignments_high_conf.tsv"),
         "dictionary_path": str(root / "Task3" / "term_dict.json"),
         "evaluation_output": str(root / "Task3" / "evaluation.json"),
     }

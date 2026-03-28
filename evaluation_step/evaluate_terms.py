@@ -53,7 +53,7 @@ def evaluate_terms(
 ) -> str:
     del min_confidence, confidence_field, count_field, entropy_base, normalize_entropy, top_k_variants
 
-    termalign_jsonl = Path(termalign_output)
+    termalign_input = Path(termalign_output)
     dict_json = Path(dictionary_path)
     out_path = Path(output_file)
 
@@ -61,8 +61,15 @@ def evaluate_terms(
         from evaluation_step.evaluation_pipeline import run_evaluation
 
         tmpdir = Path(tmp)
-        termalign_tsv = _jsonl_to_termalign_tsv(termalign_jsonl, tmpdir / "termalign.tsv")
-        gold_jsonl = _dict_json_to_gold_jsonl(dict_json, tmpdir / "gold.jsonl")
+        if termalign_input.suffix.lower() == ".tsv":
+            termalign_tsv = termalign_input
+        else:
+            termalign_tsv = _jsonl_to_termalign_tsv(termalign_input, tmpdir / "termalign.tsv")
+
+        if dict_json.suffix.lower() == ".jsonl":
+            gold_jsonl = dict_json
+        else:
+            gold_jsonl = _dict_json_to_gold_jsonl(dict_json, tmpdir / "gold.jsonl")
 
         result = run_evaluation(
             term_align_tsv=termalign_tsv,
