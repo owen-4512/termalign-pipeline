@@ -224,7 +224,7 @@ def run_full(args: argparse.Namespace) -> str:
     from termalign_step.run_termalign import run_termalign
     from evaluation_step.evaluate_terms import evaluate_terms
     if args.bertalign_batch_data_dir:
-        batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task1" / "batch_tsv")
+        batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
         code = run_batch_alignment(
             data_dir=args.bertalign_batch_data_dir,
             output_dir=batch_output_dir,
@@ -307,7 +307,7 @@ def main() -> None:
         from bertalign_step.run_bertalign import run_bertalign
         from bertalign_step.batch_align import run_batch_alignment
         if args.bertalign_batch_data_dir:
-            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task1" / "batch_tsv")
+            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
             code = run_batch_alignment(
                 data_dir=args.bertalign_batch_data_dir,
                 output_dir=batch_output_dir,

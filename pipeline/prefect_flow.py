@@ -106,7 +106,7 @@ def term_pipeline(
     eval_debug_sublogs_dir: str | None = None,
 ) -> str:
     if bertalign_batch_data_dir:
-        batch_output_dir = bertalign_batch_output_dir or str(Path("data") / "Task1" / "batch_tsv")
+        batch_output_dir = bertalign_batch_output_dir or str(Path("data") / "Task2" / "batch_tsv")
         ba_out = bertalign_batch_task.submit(
             data_dir=bertalign_batch_data_dir,
             output_dir=batch_output_dir,

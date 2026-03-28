@@ -126,7 +126,7 @@ python bertalign_step/run_bertalign.py \
 ```bash
 python bertalign_step/run_bertalign.py \
   --batch-data-dir data/Task1 \
-  --batch-output-dir data/Task1/batch_tsv \
+  --batch-output-dir data/Task2/batch_tsv \
   --src-lang zh \
   --tgt-lang en \
   --max-align 3 \
@@ -139,7 +139,7 @@ python bertalign_step/run_bertalign.py \
 ```bash
 python bertalign_step/batch_align.py \
   --data-dir data/Task1 \
-  --output-dir data/Task1/batch_tsv \
+  --output-dir data/Task2/batch_tsv \
   --src-lang zh \
   --tgt-lang en
 ```
@@ -298,7 +298,7 @@ python pipeline/prefect_flow.py \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
   --bertalign-batch-data-dir data/Task1 \
-  --bertalign-batch-output-dir data/Task1/batch_tsv \
+  --bertalign-batch-output-dir data/Task2/batch_tsv \
   --extraction-mode model \
   --min-pair-confidence 0.5 \
   --eval-mode batch \
@@ -357,7 +357,7 @@ python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ..
 ```bash
 python pipeline/runner.py full \
   --bertalign-batch-data-dir data/Task1 \
-  --bertalign-batch-output-dir data/Task1/batch_tsv \
+  --bertalign-batch-output-dir data/Task2/batch_tsv \
   --termalign-output data/Task3/all_alignments_high_conf.tsv \
   --dictionary-path data/Task3/term_dict.json \
   --evaluation-output data/results/evaluation_result.json
