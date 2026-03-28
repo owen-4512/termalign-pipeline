@@ -40,6 +40,8 @@ def run_termalign_api(
     min_pair_confidence: float = 0.5,
     top_k_pairs: int = 0,
     timeout: int = 120,
+    api_model: str | None = None,
+    prompt_text: str | None = None,
 ) -> str:
     import requests
 
@@ -59,6 +61,10 @@ def run_termalign_api(
             "alignment_confidence": float(row.get("alignment_confidence", 1.0)),
             "min_pair_confidence": min_pair_confidence,
         }
+        if api_model:
+            payload["model"] = api_model
+        if prompt_text:
+            payload["prompt"] = prompt_text
         response = requests.post(api_endpoint, headers=headers, json=payload, timeout=timeout)
         response.raise_for_status()
 
@@ -99,7 +105,10 @@ def main() -> None:
     parser.add_argument("--min-pair-confidence", type=float, default=0.5)
     parser.add_argument("--top-k-pairs", type=int, default=0)
     parser.add_argument("--timeout", type=int, default=120)
+    parser.add_argument("--api-model", default=None)
+    parser.add_argument("--prompt-file", default=None, help="Read API prompt from txt file")
     args = parser.parse_args()
+    prompt_text = Path(args.prompt_file).read_text(encoding="utf-8") if args.prompt_file else None
 
     run_termalign_api(
         bertalign_output=args.bertalign_output,
@@ -109,6 +118,8 @@ def main() -> None:
         min_pair_confidence=args.min_pair_confidence,
         top_k_pairs=args.top_k_pairs,
         timeout=args.timeout,
+        api_model=args.api_model,
+        prompt_text=prompt_text,
     )
 
 

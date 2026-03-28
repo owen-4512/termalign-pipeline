@@ -27,6 +27,8 @@ def main() -> None:
 
     parser.add_argument("--api-endpoint", required=True)
     parser.add_argument("--api-key", default=None)
+    parser.add_argument("--api-model", default=None)
+    parser.add_argument("--api-prompt-file", default=None, help="Prompt txt path")
     parser.add_argument("--min-pair-confidence", type=float, default=0.5)
     parser.add_argument("--top-k-pairs", type=int, default=0)
 
@@ -52,6 +54,7 @@ def main() -> None:
     args.command = "full"
     args.use_prefect = False
     args.extraction_mode = "api"
+    args.termalign_mode = "api"
     args.min_term_confidence = 0.0
     args.source_lang = "zh"
     args.target_lang = "en"

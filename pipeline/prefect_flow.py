@@ -48,6 +48,7 @@ def term_pipeline(
     bertalign_src_lang: str = "zh",
     bertalign_tgt_lang: str = "en",
     extraction_mode: str = "model",
+    termalign_mode: str = "hf",
     min_term_confidence: float = 0.5,
     min_pair_confidence: float = 0.5,
     source_lang: str = "en",
@@ -58,6 +59,8 @@ def term_pipeline(
     en_extractor_model: str = "owen4512/bert-base-cased-finance-term-extractor",
     api_endpoint: str | None = None,
     api_key: str | None = None,
+    api_model: str | None = None,
+    api_prompt_file: str | None = None,
     device: int = -1,
     dict_zh_path: str | None = None,
     dict_en_path: str | None = None,
@@ -87,6 +90,7 @@ def term_pipeline(
         bertalign_output=ba_out,
         output_file=termalign_output,
         extraction_mode=extraction_mode,
+        termalign_mode=termalign_mode,
         min_term_confidence=min_term_confidence,
         min_pair_confidence=min_pair_confidence,
         source_lang=source_lang,
@@ -97,6 +101,8 @@ def term_pipeline(
         en_extractor_model=en_extractor_model,
         api_endpoint=api_endpoint,
         api_key=api_key,
+        api_model=api_model,
+        api_prompt_file=api_prompt_file,
         device=device,
         dict_zh_path=dict_zh_path,
         dict_en_path=dict_en_path,
@@ -137,6 +143,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--bertalign-tgt-lang", default="en")
 
     p.add_argument("--extraction-mode", choices=["model", "api"], default="model")
+    p.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
     p.add_argument("--min-term-confidence", type=float, default=0.5)
     p.add_argument("--min-pair-confidence", type=float, default=0.5)
     p.add_argument("--source-lang", default="en")
@@ -147,6 +154,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--en-extractor-model", default="owen4512/bert-base-cased-finance-term-extractor")
     p.add_argument("--api-endpoint", default=None)
     p.add_argument("--api-key", default=None)
+    p.add_argument("--api-model", default=None)
+    p.add_argument("--api-prompt-file", default=None)
     p.add_argument("--device", type=int, default=-1)
     p.add_argument("--dict-zh-path", default=None)
     p.add_argument("--dict-en-path", default=None)
@@ -179,6 +188,7 @@ def main() -> None:
         bertalign_src_lang=args.bertalign_src_lang,
         bertalign_tgt_lang=args.bertalign_tgt_lang,
         extraction_mode=args.extraction_mode,
+        termalign_mode=args.termalign_mode,
         min_term_confidence=args.min_term_confidence,
         min_pair_confidence=args.min_pair_confidence,
         source_lang=args.source_lang,
@@ -189,6 +199,8 @@ def main() -> None:
         en_extractor_model=args.en_extractor_model,
         api_endpoint=args.api_endpoint,
         api_key=args.api_key,
+        api_model=args.api_model,
+        api_prompt_file=args.api_prompt_file,
         device=args.device,
         dict_zh_path=args.dict_zh_path,
         dict_en_path=args.dict_en_path,

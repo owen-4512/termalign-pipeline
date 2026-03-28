@@ -57,6 +57,7 @@ def run_termalign(
     bertalign_output: str,
     output_file: str,
     extraction_mode: str = "model",
+    termalign_mode: str = "hf",
     min_term_confidence: float = 0.5,
     min_pair_confidence: float = 0.5,
     source_lang: str = "zh",
@@ -71,13 +72,22 @@ def run_termalign(
     dict_zh_path: str | None = None,
     dict_en_path: str | None = None,
     skip_bert: bool = False,
+    api_model: str | None = None,
+    api_prompt_file: str | None = None,
 ) -> str:
     del min_term_confidence, source_lang, target_lang, device
 
+    mode = termalign_mode
     if extraction_mode == "api":
+        mode = "api"
+    elif extraction_mode == "model" and termalign_mode == "hf":
+        mode = "hf"
+
+    if mode == "api":
         if not api_endpoint:
             raise ValueError("api_endpoint is required when extraction_mode='api'.")
         from termalign_step.run_termalign_api import run_termalign_api
+        prompt_text = Path(api_prompt_file).read_text(encoding="utf-8") if api_prompt_file else None
         return run_termalign_api(
             bertalign_output=bertalign_output,
             output_file=output_file,
@@ -85,6 +95,8 @@ def run_termalign(
             api_key=api_key,
             min_pair_confidence=min_pair_confidence,
             top_k_pairs=top_k_pairs,
+            api_model=api_model,
+            prompt_text=prompt_text,
         )
 
     input_jsonl = Path(bertalign_output)
@@ -128,6 +140,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bertalign-output", required=True)
     parser.add_argument("--output-file", required=True)
     parser.add_argument("--extraction-mode", choices=["model", "api"], default="model")
+    parser.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
     parser.add_argument("--min-term-confidence", type=float, default=0.5)
     parser.add_argument("--min-pair-confidence", type=float, default=0.5)
     parser.add_argument("--source-lang", default="zh")
@@ -142,6 +155,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--dict-zh-path", default=None)
     parser.add_argument("--dict-en-path", default=None)
     parser.add_argument("--skip-bert", action="store_true")
+    parser.add_argument("--api-model", default=None)
+    parser.add_argument("--api-prompt-file", default=None, help="Read API prompt from txt file")
     return parser
 
 
@@ -151,6 +166,7 @@ def main() -> None:
         bertalign_output=args.bertalign_output,
         output_file=args.output_file,
         extraction_mode=args.extraction_mode,
+        termalign_mode=args.termalign_mode,
         min_term_confidence=args.min_term_confidence,
         min_pair_confidence=args.min_pair_confidence,
         source_lang=args.source_lang,
@@ -165,6 +181,8 @@ def main() -> None:
         dict_zh_path=args.dict_zh_path,
         dict_en_path=args.dict_en_path,
         skip_bert=args.skip_bert,
+        api_model=args.api_model,
+        api_prompt_file=args.api_prompt_file,
     )
 
 

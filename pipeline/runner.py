@@ -94,6 +94,7 @@ def add_bertalign_args(p: argparse.ArgumentParser) -> None:
 
 
 def add_termalign_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
     p.add_argument("--extraction-mode", choices=["model", "api"], default="model")
     p.add_argument("--min-term-confidence", type=float, default=0.5)
     p.add_argument("--min-pair-confidence", type=float, default=0.5)
@@ -109,6 +110,8 @@ def add_termalign_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--dict-zh-path", default=None)
     p.add_argument("--dict-en-path", default=None)
     p.add_argument("--skip-bert", action="store_true")
+    p.add_argument("--api-model", default=None, help="API model name, e.g. gpt-4.1")
+    p.add_argument("--api-prompt-file", default=None, help="Prompt txt path for termalign API mode")
 
 
 def add_eval_args(p: argparse.ArgumentParser) -> None:
@@ -179,6 +182,7 @@ def run_full(args: argparse.Namespace) -> str:
                 bertalign_src_lang=args.bertalign_src_lang,
                 bertalign_tgt_lang=args.bertalign_tgt_lang,
             extraction_mode=args.extraction_mode,
+            termalign_mode=args.termalign_mode,
             min_term_confidence=args.min_term_confidence,
             min_pair_confidence=args.min_pair_confidence,
             source_lang=args.source_lang,
@@ -189,6 +193,8 @@ def run_full(args: argparse.Namespace) -> str:
             en_extractor_model=args.en_extractor_model,
             api_endpoint=args.api_endpoint,
             api_key=args.api_key,
+            api_model=args.api_model,
+            api_prompt_file=args.api_prompt_file,
             device=args.device,
             dict_zh_path=args.dict_zh_path,
             dict_en_path=args.dict_en_path,
@@ -222,6 +228,7 @@ def run_full(args: argparse.Namespace) -> str:
         bertalign_output=ba_out,
         output_file=args.termalign_output,
         extraction_mode=args.extraction_mode,
+        termalign_mode=args.termalign_mode,
         min_term_confidence=args.min_term_confidence,
         min_pair_confidence=args.min_pair_confidence,
         source_lang=args.source_lang,
@@ -232,6 +239,8 @@ def run_full(args: argparse.Namespace) -> str:
         en_extractor_model=args.en_extractor_model,
         api_endpoint=args.api_endpoint,
         api_key=args.api_key,
+        api_model=args.api_model,
+        api_prompt_file=args.api_prompt_file,
         device=args.device,
         dict_zh_path=args.dict_zh_path,
         dict_en_path=args.dict_en_path,
@@ -291,6 +300,7 @@ def main() -> None:
             bertalign_output=args.bertalign_output,
             output_file=args.termalign_output,
             extraction_mode=args.extraction_mode,
+            termalign_mode=args.termalign_mode,
             min_term_confidence=args.min_term_confidence,
             min_pair_confidence=args.min_pair_confidence,
             source_lang=args.source_lang,
@@ -301,6 +311,8 @@ def main() -> None:
             en_extractor_model=args.en_extractor_model,
             api_endpoint=args.api_endpoint,
             api_key=args.api_key,
+            api_model=args.api_model,
+            api_prompt_file=args.api_prompt_file,
             device=args.device,
             dict_zh_path=args.dict_zh_path,
             dict_en_path=args.dict_en_path,

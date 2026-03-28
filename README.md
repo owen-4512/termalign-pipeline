@@ -224,12 +224,46 @@ python pipeline/runner.py full
 - 如果想强制走 Prefect 编排，可加 `--use-prefect`。
 - 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
 - 日志目录可通过 `--logs-dir /path/to/logs` 指定。
+- `termalign` 步骤新增统一模式参数：`--termalign-mode {api,local,hf}`  
+  - `hf`：使用你提供的 Hugging Face 模型（默认）  
+  - `local`：使用本地模型路径（通过 `--aligner-model / --zh-extractor-model / --en-extractor-model` 传入）  
+  - `api`：使用 API 术语对齐（可传 GPT 模型名）
 - 也可以单独跑子命令：
 
 ```bash
 python pipeline/runner.py bertalign --source-file ... --target-file ... --bertalign-output ...
 python pipeline/runner.py termalign --bertalign-output ... --termalign-output ...
 python pipeline/runner.py evaluation --termalign-output ... --dictionary-path ... --evaluation-output ...
+```
+
+### 总 pipeline CLI：termalign 模式示例
+
+使用 Hugging Face 模型（默认）：
+
+```bash
+python pipeline/runner.py full \
+  --termalign-mode hf
+```
+
+使用本地模型：
+
+```bash
+python pipeline/runner.py full \
+  --termalign-mode local \
+  --aligner-model /path/to/local/embed_model \
+  --zh-extractor-model /path/to/local/zh_ner \
+  --en-extractor-model /path/to/local/en_ner
+```
+
+使用 API（可选 GPT），并在后面传 API 与 prompt txt：
+
+```bash
+python pipeline/runner.py full \
+  --termalign-mode api \
+  --api-endpoint https://your-api/term-align \
+  --api-key YOUR_KEY \
+  --api-model gpt-4.1 \
+  --api-prompt-file data/Task3/termalign_prompt.txt
 ```
 
 ---

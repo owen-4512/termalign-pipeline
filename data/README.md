@@ -10,6 +10,7 @@
 - `data/Task3/term_dict.json`：自定义术语词典
 - `data/Task3/dict_zh.txt`：termalign 中文术语词典（可选）
 - `data/Task3/dict_en.txt`：termalign 英文术语词典（可选）
+- `data/Task3/termalign_prompt.txt`：termalign API 模式 prompt 文本（可选）
 - `data/Task3/evaluation.json`：Task3（evaluation）输出
 
 `pipeline/runner.py` 默认按该布局读取/写入；你也可以通过 `--data-dir` 切换根目录，或显式传参数覆盖默认路径。
