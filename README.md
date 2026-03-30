@@ -380,6 +380,7 @@ python pipeline/runner.py full
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署），并且默认启用 `--isolate-venv`（每一步独立 venv）。
 - 如果想强制走 Prefect 编排，可加 `--use-prefect`。
 - 如果你想关闭步骤级 venv 隔离，可传 `--no-isolate-venv`。
+- 启用步骤级 venv 时，各步骤按各自 `requirements.txt` 安装依赖，步骤之间版本互不影响（例如 bertalign 和 termalign 的 `sentence-transformers` 可不同版本）。
 - 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
 - 日志目录可通过 `--logs-dir /path/to/logs` 指定。
 - `termalign` 步骤新增统一模式参数：`--termalign-mode {api,local,hf}`  
