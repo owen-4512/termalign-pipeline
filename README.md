@@ -456,7 +456,7 @@ python pipeline/runner.py full \
 Windows 提示 `WinError 1314`（无符号链接权限）时，pipeline 会优先尝试下载到本地目录（`~/.cache/termalign_hf_models`，禁用 symlink）；若仍失败会自动回退到 repo-id 懒加载，不会因为预下载阶段直接中断。
 
 若对齐模型是 sentence-transformers 格式（例如部分 MiniLM 对齐模型），pipeline 会自动从 `AutoTokenizer/AutoModel` 回退到 `SentenceTransformer` 编码器，避免 `Tokenizer class ... does not exist` 报错。
-如果你本地 `sentence-transformers` 版本过旧（如 3.x）而模型由 5.x 训练导出，pipeline 还会继续尝试读取本地模型目录下的 `0_Transformer` 子模块；若仍失败，请升级 `sentence-transformers` 与 `transformers`。
+如果你本地 `sentence-transformers` 版本过旧（如 3.x）而模型由 5.x 训练导出，pipeline 还会继续尝试读取本地模型目录下的 `0_Transformer` 子模块；若仍失败，会退化到轻量 lexical-hash embedding（保证流程可运行），但建议升级 `sentence-transformers` 与 `transformers` 以获得最佳质量。
 
 使用本地模型：
 

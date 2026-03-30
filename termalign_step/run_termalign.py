@@ -44,11 +44,9 @@ def _ensure_hf_models_downloaded() -> tuple[str, str, str]:
                 snapshot_download(
                     repo_id=repo_id,
                     local_dir=str(local_dir),
-                    local_dir_use_symlinks=False,
                 )
             except TypeError:
-                # Compatibility for huggingface_hub versions without
-                # `local_dir_use_symlinks`.
+                # Compatibility fallback.
                 snapshot_download(repo_id=repo_id, local_dir=str(local_dir))
             resolved[repo_id] = str(local_dir)
         except Exception as exc:  # noqa: BLE001

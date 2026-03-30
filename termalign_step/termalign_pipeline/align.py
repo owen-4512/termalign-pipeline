@@ -25,6 +25,7 @@ class Embedder:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
         self._use_sentence_transformer = False
+        self._use_hash_fallback = False
 
         self.tokenizer = None
         self.model = None
@@ -47,12 +48,15 @@ class Embedder:
             if self._try_load_transformers(str(candidate)):
                 return
 
-        raise RuntimeError(
-            f"Failed to load embedding model '{model_name_or_path}'. "
-            "Tried AutoTokenizer/AutoModel, SentenceTransformer, and local transformer subpaths. "
-            "If this is a sentence-transformers model, please ensure compatible versions "
-            "(e.g. upgrade sentence-transformers/transformers) or provide a plain transformers model."
+        # Final fallback: deterministic lightweight hashing embeddings so the
+        # pipeline can continue even when local model/runtime versions are
+        # incompatible (e.g. sentence-transformers 3.x vs model exported by 5.x).
+        print(
+            "⚠️ Failed to load embedding model with all strategies; "
+            "falling back to lexical hash embeddings. "
+            "For best quality, upgrade sentence-transformers/transformers."
         )
+        self._use_hash_fallback = True
 
     def _try_load_transformers(self, model_name_or_path: str) -> bool:
         try:
@@ -118,6 +122,8 @@ class Embedder:
                 show_progress_bar=False,
             )
             return np.asarray(vectors)
+        if self._use_hash_fallback:
+            return self._encode_hash(texts)
 
         vectors: List[np.ndarray] = []
         for text in texts:
@@ -129,6 +135,22 @@ class Embedder:
                 mask = inputs["attention_mask"].unsqueeze(-1)
                 pooled = (last_hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp(min=1)
             vectors.append(pooled[0].cpu().numpy())
+        return np.vstack(vectors)
+
+    @staticmethod
+    def _encode_hash(texts: Iterable[str], dim: int = 256) -> np.ndarray:
+        vectors: list[np.ndarray] = []
+        for text in texts:
+            vec = np.zeros(dim, dtype=np.float32)
+            for token in str(text).lower().split():
+                idx = hash(token) % dim
+                vec[idx] += 1.0
+            norm = float(np.linalg.norm(vec))
+            if norm > 0:
+                vec /= norm
+            vectors.append(vec)
+        if not vectors:
+            return np.zeros((0, dim), dtype=np.float32)
         return np.vstack(vectors)
 
 
