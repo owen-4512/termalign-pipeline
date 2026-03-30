@@ -52,6 +52,32 @@ logs/
 默认 `pipeline/runner.py` 会按这个结构找文件；也可以用 `--data-dir` 或显式参数覆盖。
 每次运行会写日志到 `logs/`，也可以用 `--logs-dir` 指定目录。
 
+### 总 pipeline 文件放置（你问的重点）
+
+如果你直接跑总流程（`python pipeline/runner.py full` 或 `python pipeline/prefect_flow.py ...`），请按下面放：
+
+- **target text（txt）**：放在 `data/Task1/target.txt`
+- **source text（txt）**：放在 `data/Task1/source.txt`
+- **termalign 术语表（txt）**：推荐放在 `data/Task2/dict_zh.txt` 和 `data/Task2/dict_en.txt`
+  - 每行一个术语（UTF-8）
+  - 通过 `--dict-zh-path` / `--dict-en-path` 传入（不传也会按这个默认路径找）
+- **evaluation 词典（jsonl）**：放在 `data/Task3/proper_terms.jsonl`
+  - 通过 `--dictionary-path` 传入（`runner.py full` 默认就是这个路径）
+
+示例目录（总流程）：
+
+```text
+data/
+├─ Task1/
+│  ├─ source.txt
+│  └─ target.txt
+├─ Task2/
+│  ├─ dict_zh.txt
+│  └─ dict_en.txt
+└─ Task3/
+   └─ proper_terms.jsonl
+```
+
 ---
 
 ## 子项目独立数据目录
