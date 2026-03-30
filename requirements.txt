@@ -1,4 +1,3 @@
 -r bertalign_step/requirements.txt
 -r termalign_step/requirements.txt
 -r evaluation_step/requirements.txt
-prefect>=2.19.0,<3.0
