@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from pathlib import Path
 from typing import Iterable, List
 
 import numpy as np
 import torch
-from sentence_transformers import SentenceTransformer
 from transformers import AutoModel, AutoTokenizer
 
 from .extractors import TermOccurrence
@@ -25,22 +26,89 @@ class Embedder:
         self.device = device
         self._use_sentence_transformer = False
 
+        self.tokenizer = None
+        self.model = None
+        self.sentence_transformer = None
+
+        if self._try_load_transformers(model_name_or_path):
+            return
+
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-            self.model = AutoModel.from_pretrained(model_name_or_path)
-            self.model.eval()
-            self.model.to(self.device)
-            self.sentence_transformer = None
-        except Exception as error:  # noqa: BLE001
-            message = str(error)
-            if "Tokenizer class" not in message and "does not exist" not in message:
-                raise
-            # Fallback for sentence-transformers style repos where AutoTokenizer
-            # cannot infer a Transformers tokenizer class.
+            from sentence_transformers import SentenceTransformer
             self._use_sentence_transformer = True
             self.sentence_transformer = SentenceTransformer(model_name_or_path, device=self.device)
+            return
+        except Exception:  # noqa: BLE001
+            # Keep trying below with sentence-transformers-style local subpaths.
+            self._use_sentence_transformer = False
+            self.sentence_transformer = None
+
+        for candidate in self._transformer_candidates(model_name_or_path):
+            if self._try_load_transformers(str(candidate)):
+                return
+
+        raise RuntimeError(
+            f"Failed to load embedding model '{model_name_or_path}'. "
+            "Tried AutoTokenizer/AutoModel, SentenceTransformer, and local transformer subpaths. "
+            "If this is a sentence-transformers model, please ensure compatible versions "
+            "(e.g. upgrade sentence-transformers/transformers) or provide a plain transformers model."
+        )
+
+    def _try_load_transformers(self, model_name_or_path: str) -> bool:
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name_or_path,
+                use_fast=False,
+                trust_remote_code=True,
+            )
+            self.model = AutoModel.from_pretrained(
+                model_name_or_path,
+                trust_remote_code=True,
+            )
+            self.model.eval()
+            self.model.to(self.device)
+            self._use_sentence_transformer = False
+            return True
+        except Exception:  # noqa: BLE001
             self.tokenizer = None
             self.model = None
+            return False
+
+    @staticmethod
+    def _transformer_candidates(model_name_or_path: str) -> list[Path]:
+        root = Path(model_name_or_path)
+        if not root.exists() or not root.is_dir():
+            return []
+        candidates: list[Path] = []
+        direct = root / "0_Transformer"
+        if direct.exists():
+            candidates.append(direct)
+        modules_json = root / "modules.json"
+        if modules_json.exists():
+            try:
+                modules = json.loads(modules_json.read_text(encoding="utf-8"))
+            except Exception:  # noqa: BLE001
+                modules = []
+            if isinstance(modules, list):
+                for item in modules:
+                    if not isinstance(item, dict):
+                        continue
+                    item_type = str(item.get("type", ""))
+                    item_path = item.get("path")
+                    if "Transformer" not in item_type or not item_path:
+                        continue
+                    candidate = root / str(item_path)
+                    if candidate.exists():
+                        candidates.append(candidate)
+        unique: list[Path] = []
+        seen: set[str] = set()
+        for candidate in candidates:
+            key = str(candidate.resolve())
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(candidate)
+        return unique
 
     def encode(self, texts: Iterable[str]) -> np.ndarray:
         if self._use_sentence_transformer and self.sentence_transformer is not None:
