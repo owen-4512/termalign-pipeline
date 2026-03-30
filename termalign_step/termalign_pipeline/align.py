@@ -5,6 +5,7 @@ from typing import Iterable, List
 
 import numpy as np
 import torch
+from sentence_transformers import SentenceTransformer
 from transformers import AutoModel, AutoTokenizer
 
 from .extractors import TermOccurrence
@@ -19,15 +20,37 @@ class AlignmentResult:
 
 class Embedder:
     def __init__(self, model_name_or_path: str, device: str | None = None) -> None:
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-        self.model = AutoModel.from_pretrained(model_name_or_path)
-        self.model.eval()
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
-        self.model.to(self.device)
+        self._use_sentence_transformer = False
+
+        try:
+            self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
+            self.model = AutoModel.from_pretrained(model_name_or_path)
+            self.model.eval()
+            self.model.to(self.device)
+            self.sentence_transformer = None
+        except Exception as error:  # noqa: BLE001
+            message = str(error)
+            if "Tokenizer class" not in message and "does not exist" not in message:
+                raise
+            # Fallback for sentence-transformers style repos where AutoTokenizer
+            # cannot infer a Transformers tokenizer class.
+            self._use_sentence_transformer = True
+            self.sentence_transformer = SentenceTransformer(model_name_or_path, device=self.device)
+            self.tokenizer = None
+            self.model = None
 
     def encode(self, texts: Iterable[str]) -> np.ndarray:
+        if self._use_sentence_transformer and self.sentence_transformer is not None:
+            vectors = self.sentence_transformer.encode(
+                list(texts),
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
+            return np.asarray(vectors)
+
         vectors: List[np.ndarray] = []
         for text in texts:
             inputs = self.tokenizer(text, return_tensors="pt", truncation=True)
