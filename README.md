@@ -379,6 +379,7 @@ python pipeline/runner.py full
 
 - 默认 `full` 是顺序执行（不依赖 Prefect 服务端部署）。
 - 如果想强制走 Prefect 编排，可加 `--use-prefect`。
+- 如果你希望每个步骤使用独立虚拟环境并通过 subprocess 串联执行，可加 `--isolate-venv`（会自动为 `bertalign_step / termalign_step / evaluation_step` 建 venv、装各自 requirements，并继续推进到后续步骤）。
 - 如果你把数据放在别处，可传 `--data-dir /path/to/your-data-root`。
 - 日志目录可通过 `--logs-dir /path/to/logs` 指定。
 - `termalign` 步骤新增统一模式参数：`--termalign-mode {api,local,hf}`  

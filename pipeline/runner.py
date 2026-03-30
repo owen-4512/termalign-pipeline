@@ -16,10 +16,55 @@ import logging
 from pathlib import Path
 from datetime import datetime
 import sys
+import subprocess
+import os
+import venv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+VENV_ROOT = PROJECT_ROOT / ".venvs"
+
+
+def _venv_python(venv_dir: Path) -> Path:
+    if os.name == "nt":
+        return venv_dir / "Scripts" / "python.exe"
+    return venv_dir / "bin" / "python"
+
+
+def ensure_step_venv(step_name: str, requirements_file: Path) -> Path:
+    venv_dir = VENV_ROOT / step_name
+    py = _venv_python(venv_dir)
+    if not py.exists():
+        logging.info("[venv] creating %s", venv_dir)
+        venv.create(venv_dir, with_pip=True)
+        py = _venv_python(venv_dir)
+        subprocess.run([str(py), "-m", "pip", "install", "--upgrade", "pip"], check=True)
+        if requirements_file.exists():
+            subprocess.run([str(py), "-m", "pip", "install", "-r", str(requirements_file)], check=True)
+    return py
+
+
+def run_module_in_step_venv(step_name: str, module: str, args_list: list[str]) -> subprocess.CompletedProcess[str]:
+    req_file = PROJECT_ROOT / step_name / "requirements.txt"
+    py = ensure_step_venv(step_name, req_file)
+    cmd = [str(py), "-m", module, *args_list]
+    proc = subprocess.run(
+        cmd,
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+    )
+    if proc.stdout:
+        logging.info("[%s stdout]\n%s", step_name, proc.stdout.strip())
+    if proc.stderr:
+        logging.info("[%s stderr]\n%s", step_name, proc.stderr.strip())
+    if proc.returncode != 0:
+        raise RuntimeError(f"{step_name} failed with code={proc.returncode}")
+    return proc
 
 def resolve_default_paths(data_dir: str) -> dict[str, str]:
     root = Path(data_dir)
@@ -157,6 +202,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_termalign_args(full)
     add_eval_args(full)
     full.add_argument("--use-prefect", action="store_true", help="Run full flow through Prefect")
+    full.add_argument("--isolate-venv", action="store_true", help="Run each step in its own venv via subprocess")
 
     ba = sub.add_parser("bertalign", help="Run only bertalign")
     add_data_dir_arg(ba)
@@ -237,6 +283,85 @@ def run_full(args: argparse.Namespace) -> str:
             eval_debug_log=args.eval_debug_log,
             eval_debug_sublogs_dir=args.eval_debug_sublogs_dir,
         )
+
+    if args.isolate_venv:
+        logging.info("Execution mode: subprocess-per-step venv")
+        if args.bertalign_batch_data_dir:
+            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
+            run_module_in_step_venv(
+                "bertalign_step",
+                "bertalign_step.batch_align",
+                [
+                    "--data-dir", args.bertalign_batch_data_dir,
+                    "--output-dir", batch_output_dir,
+                    "--src-lang", args.bertalign_src_lang,
+                    "--tgt-lang", args.bertalign_tgt_lang,
+                    "--max-align", str(args.bertalign_max_align),
+                    "--top-k", str(args.bertalign_top_k),
+                    "--win", str(args.bertalign_win),
+                    *(["--strict"] if args.bertalign_batch_strict else []),
+                ],
+            )
+            ba_out = batch_output_dir
+        else:
+            run_module_in_step_venv(
+                "bertalign_step",
+                "bertalign_step.run_bertalign",
+                [
+                    "--source-file", args.source_file,
+                    "--target-file", args.target_file,
+                    "--output-file", args.bertalign_output,
+                    "--max-align", str(args.bertalign_max_align),
+                    "--top-k", str(args.bertalign_top_k),
+                    "--win", str(args.bertalign_win),
+                    "--src-lang", args.bertalign_src_lang,
+                    "--tgt-lang", args.bertalign_tgt_lang,
+                ],
+            )
+            ba_out = args.bertalign_output
+
+        run_module_in_step_venv(
+            "termalign_step",
+            "termalign_step.run_termalign",
+            [
+                "--bertalign-output", ba_out,
+                "--output-file", args.termalign_output,
+                "--extraction-mode", args.extraction_mode,
+                "--termalign-mode", args.termalign_mode,
+                "--min-pair-confidence", str(args.min_pair_confidence),
+                "--top-k-pairs", str(args.top_k_pairs),
+                "--aligner-model", args.aligner_model,
+                "--zh-extractor-model", args.zh_extractor_model,
+                "--en-extractor-model", args.en_extractor_model,
+                *(["--api-endpoint", args.api_endpoint] if args.api_endpoint else []),
+                *(["--api-key", args.api_key] if args.api_key else []),
+                *(["--api-model", args.api_model] if args.api_model else []),
+                *(["--api-prompt-file", args.api_prompt_file] if args.api_prompt_file else []),
+                *(["--dict-zh-path", args.dict_zh_path] if args.dict_zh_path else []),
+                *(["--dict-en-path", args.dict_en_path] if args.dict_en_path else []),
+                *(["--skip-bert"] if args.skip_bert else []),
+            ],
+        )
+
+        run_module_in_step_venv(
+            "evaluation_step",
+            "evaluation_step.evaluate_terms",
+            [
+                "--termalign-output", args.termalign_output,
+                "--dictionary-path", args.dictionary_path,
+                "--output-file", args.evaluation_output,
+                "--mode", args.eval_mode,
+                "--report-level", args.eval_report_level,
+                "--alpha", str(args.eval_alpha),
+                "--beta", str(args.eval_beta),
+                "--metrics", *args.eval_metrics,
+                *(["--target-txt", args.eval_target_txt] if args.eval_target_txt else []),
+                *(["--target-dir", args.eval_target_dir] if args.eval_target_dir else []),
+                *(["--debug-log", args.eval_debug_log] if args.eval_debug_log else []),
+                *(["--debug-sublogs-dir", args.eval_debug_sublogs_dir] if args.eval_debug_sublogs_dir else []),
+            ],
+        )
+        return args.evaluation_output
 
     logging.info("Execution mode: sequential")
     from bertalign_step.run_bertalign import run_bertalign
