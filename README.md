@@ -348,6 +348,8 @@ python pipeline/prefect_flow.py \
   --eval-metrics all
 ```
 
+其中 `--inputs-dir` 可作为 `--bertalign-batch-data-dir` 的别名使用。
+
 说明（batch 全流程最终评分）：
 - 该命令会完成：batch bertalign → batch termalign 聚合 → evaluation；
 - evaluation CLI 会在终端打印精简分数 JSON（含 `final_score`）；
@@ -435,6 +437,7 @@ python pipeline/runner.py full \
 
 说明：
 - `--bertalign-batch-data-dir` 开启 batch bertalign；
+- 你也可以用更直观的别名 `--inputs-dir`（等价于 `--bertalign-batch-data-dir`）指定 Task1 输入文件夹；
 - batch 结果会作为目录输入直接传给 termalign；
 - termalign 会输出“每文件结果 + 总汇总结果”（文件名前缀沿用 bertalign 输出文件名）到 `data/Task3/alignment_details/`；
 - evaluation 优先读取 `data/Task3/high_confidence/all_alignments_high_conf.tsv` 打分并产出 `final_score`。

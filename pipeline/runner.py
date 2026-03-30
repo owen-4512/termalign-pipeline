@@ -104,6 +104,11 @@ def add_bertalign_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--bertalign-win", type=int, default=8)
     p.add_argument("--bertalign-src-lang", default="zh")
     p.add_argument("--bertalign-tgt-lang", default="en")
+    p.add_argument(
+        "--inputs-dir",
+        default=None,
+        help="Alias for --bertalign-batch-data-dir. Set Task1 input folder for batch bertalign.",
+    )
     p.add_argument("--bertalign-batch-data-dir", default=None, help="Run bertalign in batch mode using input dir")
     p.add_argument("--bertalign-batch-output-dir", default=None, help="Batch bertalign TSV output directory")
     p.add_argument("--bertalign-batch-strict", action="store_true", help="Batch bertalign strict mode")
@@ -178,6 +183,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_full(args: argparse.Namespace) -> str:
     args = apply_data_defaults(args)
+    if args.inputs_dir and not args.bertalign_batch_data_dir:
+        args.bertalign_batch_data_dir = args.inputs_dir
     setup_run_logger(args.logs_dir, "full")
     ensure_parent_dirs(args.bertalign_output, args.termalign_output, args.evaluation_output)
     logging.info("Running full pipeline with data_dir=%s", args.data_dir)
@@ -313,6 +320,8 @@ def main() -> None:
         return
 
     args = apply_data_defaults(args)
+    if getattr(args, "inputs_dir", None) and not getattr(args, "bertalign_batch_data_dir", None):
+        args.bertalign_batch_data_dir = args.inputs_dir
     setup_run_logger(args.logs_dir, args.command)
     logging.info("Running command=%s data_dir=%s", args.command, args.data_dir)
 

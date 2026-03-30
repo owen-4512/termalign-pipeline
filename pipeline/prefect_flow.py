@@ -190,6 +190,11 @@ def build_arg_parser() -> argparse.ArgumentParser:
     p.add_argument("--bertalign-win", type=int, default=8)
     p.add_argument("--bertalign-src-lang", default="zh")
     p.add_argument("--bertalign-tgt-lang", default="en")
+    p.add_argument(
+        "--inputs-dir",
+        default=None,
+        help="Alias for --bertalign-batch-data-dir. Set Task1 input folder for batch bertalign.",
+    )
     p.add_argument("--bertalign-batch-data-dir", default=None)
     p.add_argument("--bertalign-batch-output-dir", default=None)
     p.add_argument("--bertalign-batch-strict", action="store_true")
@@ -227,6 +232,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_arg_parser().parse_args()
+    if args.inputs_dir and not args.bertalign_batch_data_dir:
+        args.bertalign_batch_data_dir = args.inputs_dir
     if not args.bertalign_batch_data_dir and not (args.source_file and args.target_file):
         raise ValueError("Provide --source-file/--target-file, or use --bertalign-batch-data-dir for batch mode.")
     term_pipeline(
