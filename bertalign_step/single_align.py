@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import inspect
 import re
 from pathlib import Path
 
@@ -122,7 +123,41 @@ def run_alignment(
     tgt_text = read_text(tgt)
     src_text, tgt_text = preprocess_for_alignment(src_text, tgt_text, src_lang=src_lang, tgt_lang=tgt_lang)
 
-    aligner = Bertalign(src_text, tgt_text, max_align=max_align, top_k=top_k, win=win)
+    init_sig = inspect.signature(Bertalign.__init__)
+    aligner_kwargs: dict[str, int | str] = {"max_align": max_align, "top_k": top_k, "win": win}
+
+    if "src_lang" in init_sig.parameters:
+        aligner_kwargs["src_lang"] = src_lang
+    if "tgt_lang" in init_sig.parameters:
+        aligner_kwargs["tgt_lang"] = tgt_lang
+
+    patched_detect_lang = False
+    original_detect_lang = None
+    if "src_lang" not in init_sig.parameters or "tgt_lang" not in init_sig.parameters:
+        # bertalign versions that auto-detect language may break with newer
+        # googletrans (detect returns coroutine). Force deterministic language
+        # detection using provided CLI languages.
+        from bertalign import aligner as aligner_module
+
+        forced_langs = [src_lang, tgt_lang]
+
+        def _safe_detect_lang(text: str) -> str:
+            if forced_langs:
+                return forced_langs.pop(0)
+            return "zh" if re.search(r"[\u4e00-\u9fff]", text) else "en"
+
+        original_detect_lang = getattr(aligner_module, "detect_lang", None)
+        aligner_module.detect_lang = _safe_detect_lang
+        patched_detect_lang = True
+
+    try:
+        aligner = Bertalign(src_text, tgt_text, **aligner_kwargs)
+    finally:
+        if patched_detect_lang:
+            from bertalign import aligner as aligner_module
+            if original_detect_lang is not None:
+                aligner_module.detect_lang = original_detect_lang
+
     aligner.align_sents()
 
     output_path = Path(output)

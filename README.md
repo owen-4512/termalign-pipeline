@@ -130,6 +130,8 @@ data/
    - `bertalign_step/single_align.py`：单文件对齐  
    - `bertalign_step/batch_align.py`：批量文件对齐（文件名模式 `YYYY_ID_lang.txt`）
 
+兼容性说明：针对部分 `bertalign + googletrans` 组合在 Windows 上可能出现的 `Translator.detect` coroutine 报错，当前实现会优先使用 CLI 传入的 `src_lang/tgt_lang`，避免自动语言检测导致中断。
+
 ---
 
 ### A. bertalign 步骤
