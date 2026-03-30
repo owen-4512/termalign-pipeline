@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
 import json
 import os
 import shutil
@@ -17,6 +18,45 @@ HF_ALIGN_MODEL = "owen4512/minilm-finance-term-aligner"
 DEFAULT_TERM_LIST_DIR = Path(__file__).resolve().parent / "term_list"
 DEFAULT_ZH_TERM_LIST = DEFAULT_TERM_LIST_DIR / "zh_terms.txt"
 DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
+
+
+def _parse_version(version: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for token in version.replace("-", ".").split("."):
+        if token.isdigit():
+            parts.append(int(token))
+        else:
+            break
+    return tuple(parts)
+
+
+def _ensure_embedding_runtime_versions() -> None:
+    """Fail fast when local runtime is too old for current HF aligner exports."""
+    try:
+        st_ver = importlib.metadata.version("sentence-transformers")
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise RuntimeError(
+            "Missing dependency: sentence-transformers. "
+            "Please run: pip install -U 'sentence-transformers>=5.2.2'"
+        ) from exc
+    try:
+        tf_ver = importlib.metadata.version("transformers")
+    except importlib.metadata.PackageNotFoundError as exc:
+        raise RuntimeError(
+            "Missing dependency: transformers. "
+            "Please run: pip install -U 'transformers>=4.46.0'"
+        ) from exc
+
+    if _parse_version(st_ver) < (5, 2, 2):
+        raise RuntimeError(
+            f"sentence-transformers=={st_ver} is too old for this HF aligner. "
+            "Please upgrade: pip install -U 'sentence-transformers>=5.2.2' 'transformers>=4.46.0'"
+        )
+    if _parse_version(tf_ver) < (4, 46, 0):
+        raise RuntimeError(
+            f"transformers=={tf_ver} is too old for this HF aligner. "
+            "Please upgrade: pip install -U 'transformers>=4.46.0'"
+        )
 
 
 def _ensure_hf_models_downloaded() -> tuple[str, str, str]:
@@ -225,6 +265,7 @@ def run_termalign(
         )
 
     if mode == "hf":
+        _ensure_embedding_runtime_versions()
         zh_extractor_model, en_extractor_model, aligner_model = _ensure_hf_models_downloaded()
 
     dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
