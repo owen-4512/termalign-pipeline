@@ -26,6 +26,8 @@ pip install -r termalign_step/requirements.txt
 pip install -r evaluation_step/requirements.txt
 ```
 
+`evaluation_step` 依赖里已包含 `spacy-lookups-data`，用于在未安装 `en_core_web_sm` 时提供 lemmatizer lookup 表，避免 `E955 lemma_lookup` 报错。
+
 ---
 
 ## 数据格式

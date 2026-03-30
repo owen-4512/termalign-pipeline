@@ -18,7 +18,13 @@ def _get_nlp() -> Language:
                 nlp.add_pipe("lemmatizer", config={"mode": "lookup"})
             except Exception:
                 nlp.add_pipe("lemmatizer", config={"mode": "rule"})
-        nlp.initialize()
+        try:
+            nlp.initialize()
+        except Exception:
+            # If lookups are unavailable (e.g. missing spacy-lookups-data),
+            # fall back to tokenizer-only mode. `normalize()` already falls
+            # back to token text when lemma is empty.
+            return spacy.blank("en")
         return nlp
 
 
