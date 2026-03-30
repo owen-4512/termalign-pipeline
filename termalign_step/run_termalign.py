@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import tempfile
 from pathlib import Path
@@ -18,27 +19,49 @@ DEFAULT_ZH_TERM_LIST = DEFAULT_TERM_LIST_DIR / "zh_terms.txt"
 DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
 
 
-def _ensure_hf_models_downloaded() -> None:
+def _ensure_hf_models_downloaded() -> tuple[str, str, str]:
     """Pre-download required Hugging Face models for hf mode.
 
     On some Windows environments, creating symlinks in Hugging Face cache can
     fail without admin/developer privileges (WinError 1314). In that case we
-    gracefully skip the eager pre-download and let Transformers download lazily
-    during `from_pretrained`, which is typically more permissive.
+    gracefully fall back to repo-id lazy loading.
     """
     from huggingface_hub import snapshot_download
 
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
+    download_root = Path.home() / ".cache" / "termalign_hf_models"
+    resolved: dict[str, str] = {
+        HF_ZH_MODEL: HF_ZH_MODEL,
+        HF_EN_MODEL: HF_EN_MODEL,
+        HF_ALIGN_MODEL: HF_ALIGN_MODEL,
+    }
+
     for repo_id in (HF_ZH_MODEL, HF_EN_MODEL, HF_ALIGN_MODEL):
+        local_dir = download_root / repo_id.replace("/", "--")
         try:
-            snapshot_download(repo_id=repo_id)
-        except OSError as exc:
+            local_dir.parent.mkdir(parents=True, exist_ok=True)
+            try:
+                snapshot_download(
+                    repo_id=repo_id,
+                    local_dir=str(local_dir),
+                    local_dir_use_symlinks=False,
+                )
+            except TypeError:
+                # Compatibility for huggingface_hub versions without
+                # `local_dir_use_symlinks`.
+                snapshot_download(repo_id=repo_id, local_dir=str(local_dir))
+            resolved[repo_id] = str(local_dir)
+        except Exception as exc:  # noqa: BLE001
             if getattr(exc, "winerror", None) == 1314:
                 print(
                     "⚠️ Hugging Face cache symlink permission issue detected on Windows "
-                    f"while pre-downloading '{repo_id}'. Falling back to lazy download during model loading."
+                    f"while pre-downloading '{repo_id}'. Falling back to repo-id loading."
                 )
-                return
-            raise
+                continue
+            print(f"⚠️ Failed to pre-download '{repo_id}': {exc}. Falling back to repo-id loading.")
+            continue
+
+    return resolved[HF_ZH_MODEL], resolved[HF_EN_MODEL], resolved[HF_ALIGN_MODEL]
 
 
 def _jsonl_to_tsv(input_jsonl: Path, output_tsv: Path) -> str:
@@ -204,10 +227,7 @@ def run_termalign(
         )
 
     if mode == "hf":
-        _ensure_hf_models_downloaded()
-        zh_extractor_model = HF_ZH_MODEL
-        en_extractor_model = HF_EN_MODEL
-        aligner_model = HF_ALIGN_MODEL
+        zh_extractor_model, en_extractor_model, aligner_model = _ensure_hf_models_downloaded()
 
     dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
 

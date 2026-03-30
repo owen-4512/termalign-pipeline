@@ -451,7 +451,7 @@ python pipeline/runner.py full \
   --termalign-mode hf
 ```
 
-Windows 提示 `WinError 1314`（无符号链接权限）时，pipeline 会自动跳过 eager 预下载，改为在 `from_pretrained` 阶段懒下载模型；一般无需管理员权限即可继续运行。
+Windows 提示 `WinError 1314`（无符号链接权限）时，pipeline 会优先尝试下载到本地目录（`~/.cache/termalign_hf_models`，禁用 symlink）；若仍失败会自动回退到 repo-id 懒加载，不会因为预下载阶段直接中断。
 
 使用本地模型：
 
