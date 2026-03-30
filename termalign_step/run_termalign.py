@@ -122,6 +122,26 @@ def _alignment_tsv_to_jsonl(align_tsv: Path, output_jsonl: Path, min_similarity:
     return str(output_jsonl)
 
 
+def _resolve_output_dirs(output_file: Path, output_dir: str | None) -> tuple[Path, Path]:
+    """Resolve high-confidence output path and alignment-detail output directory.
+
+    - high-confidence output: `output_file`
+    - alignment details:
+      - explicit `output_dir` if provided
+      - otherwise, if output file is under `.../high_confidence/`, use sibling
+        `.../alignment_details/`
+      - fallback to `output_file.parent`
+    """
+    high_conf_output = output_file
+    if output_dir:
+        details_dir = Path(output_dir)
+    elif output_file.parent.name == "high_confidence":
+        details_dir = output_file.parent.parent / "alignment_details"
+    else:
+        details_dir = output_file.parent
+    return high_conf_output, details_dir
+
+
 def run_termalign(
     bertalign_output: str,
     output_file: str,
@@ -179,14 +199,15 @@ def run_termalign(
 
     input_data = Path(bertalign_output)
     output_path = Path(output_file)
+    high_conf_output, details_output_dir = _resolve_output_dirs(output_path, output_dir)
 
     with tempfile.TemporaryDirectory(prefix="termalign-") as tmpdir:
         from termalign_step.termalign_pipeline.pipeline import run_pipeline
 
         tmpdir_path = Path(tmpdir)
         prepared_input = _prepare_termalign_input(input_data, tmpdir_path)
-        actual_output_dir = Path(output_dir) if output_dir else output_path.parent
-        actual_output_dir.mkdir(parents=True, exist_ok=True)
+        details_output_dir.mkdir(parents=True, exist_ok=True)
+        high_conf_output.parent.mkdir(parents=True, exist_ok=True)
 
         run_pipeline(
             input_path=prepared_input,
@@ -196,22 +217,21 @@ def run_termalign(
             bert_model_en=en_extractor_model,
             embed_model=aligner_model,
             similarity_threshold=min_pair_confidence,
-            output_dir=actual_output_dir,
+            output_dir=details_output_dir,
             skip_bert=skip_bert,
         )
 
-        preferred = actual_output_dir / "all_alignments_high_conf.tsv"
+        preferred = details_output_dir / "all_alignments_high_conf.tsv"
         if not preferred.exists():
-            preferred = actual_output_dir / "alignments_high_conf.tsv"
+            preferred = details_output_dir / "alignments_high_conf.tsv"
         if not preferred.exists():
-            preferred = actual_output_dir / "all_alignments.tsv"
+            preferred = details_output_dir / "all_alignments.tsv"
         if not preferred.exists():
-            preferred = actual_output_dir / "alignments.tsv"
+            preferred = details_output_dir / "alignments.tsv"
 
-        if preferred != output_path:
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(preferred, output_path)
-        return str(output_path)
+        if preferred != high_conf_output:
+            shutil.copy2(preferred, high_conf_output)
+        return str(high_conf_output)
 
 
 def build_arg_parser() -> argparse.ArgumentParser:

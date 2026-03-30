@@ -40,7 +40,14 @@ data/
 ├─ Task2/
 │  └─ bertalign.jsonl
 ├─ Task3/
-│  ├─ all_alignments_high_conf.tsv
+│  ├─ high_confidence/
+│  │  └─ all_alignments_high_conf.tsv
+│  ├─ alignment_details/
+│  │  ├─ all_terms_zh.tsv
+│  │  ├─ all_terms_en.tsv
+│  │  ├─ all_alignments.tsv
+│  │  ├─ all_alignments_high_conf.tsv
+│  │  └─ <bertalign_stem>_*.tsv
 │  └─ proper_terms.jsonl
 └─ results/
    └─ evaluation_result.json
@@ -63,6 +70,9 @@ logs/
   - 通过 `--dict-zh-path` / `--dict-en-path` 传入（不传也会按这个默认路径找）
 - **evaluation 词典（jsonl）**：放在 `data/Task3/proper_terms.jsonl`
   - 通过 `--dictionary-path` 传入（`runner.py full` 默认就是这个路径）
+- **termalign 输出（Task3 分层）**：
+  - `data/Task3/high_confidence/`：专门放给 evaluation 使用的高置信结果（默认 `all_alignments_high_conf.tsv`）
+  - `data/Task3/alignment_details/`：放所有其余明细结果（每文件 + 全量汇总）
 
 示例目录（总流程）：
 
@@ -197,6 +207,10 @@ termalign 会在 `--output-dir` 下输出：
 
 其中 `<bertalign_stem>` 直接来自 bertalign 文件名（例如 `2016_01_zh_en_align`）。
 
+在总 pipeline 默认路径中，Task3 会分层保存：
+- `data/Task3/alignment_details/`：上述全部明细文件；
+- `data/Task3/high_confidence/all_alignments_high_conf.tsv`：从明细目录复制出的 evaluation 专用输入。
+
 另外，`termalign_step/term_list/` 下已提供默认术语表文件：  
 - `zh_terms.txt`（中文术语）  
 - `en_terms.txt`（英文术语）  
@@ -305,7 +319,7 @@ python pipeline/prefect_flow.py \
   --target-file data/Task1/target.txt \
   --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
-  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --termalign-output data/Task3/high_confidence/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
   --extraction-mode model \
   --min-term-confidence 0.5 \
@@ -323,7 +337,7 @@ Prefect 也支持在总流程中启用 batch bertalign（后续自动进入 term
 python pipeline/prefect_flow.py \
   --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
-  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --termalign-output data/Task3/high_confidence/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
   --bertalign-batch-data-dir data/Task1 \
   --bertalign-batch-output-dir data/Task2/batch_tsv \
@@ -400,7 +414,7 @@ python pipeline/runner.py full \
 python pipeline/prefect_flow.py \
   --dictionary-path data/Task3/proper_terms.jsonl \
   --bertalign-output data/Task2/bertalign.jsonl \
-  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --termalign-output data/Task3/high_confidence/all_alignments_high_conf.tsv \
   --evaluation-output data/results/evaluation_result.json \
   --dict-zh-path data/Task2/dict_zh.txt \
   --dict-en-path data/Task2/dict_en.txt
@@ -414,7 +428,7 @@ python pipeline/prefect_flow.py \
 python pipeline/runner.py full \
   --bertalign-batch-data-dir data/Task1 \
   --bertalign-batch-output-dir data/Task2/batch_tsv \
-  --termalign-output data/Task3/all_alignments_high_conf.tsv \
+  --termalign-output data/Task3/high_confidence/all_alignments_high_conf.tsv \
   --dictionary-path data/Task3/proper_terms.jsonl \
   --evaluation-output data/results/evaluation_result.json
 ```
@@ -422,8 +436,8 @@ python pipeline/runner.py full \
 说明：
 - `--bertalign-batch-data-dir` 开启 batch bertalign；
 - batch 结果会作为目录输入直接传给 termalign；
-- termalign 会输出“每文件结果 + 总汇总结果”（文件名前缀沿用 bertalign 输出文件名）；
-- evaluation 使用 `all_alignments_high_conf.tsv` 打分并产出 `final_score`。
+- termalign 会输出“每文件结果 + 总汇总结果”（文件名前缀沿用 bertalign 输出文件名）到 `data/Task3/alignment_details/`；
+- evaluation 优先读取 `data/Task3/high_confidence/all_alignments_high_conf.tsv` 打分并产出 `final_score`。
 
 ### 总 pipeline CLI：termalign 模式示例
 
