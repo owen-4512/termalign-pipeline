@@ -1,6 +1,6 @@
 bertalign @ git+https://github.com/bfsujason/bertalign.git
 numba==0.60.0
 faiss-cpu>=1.7.2
-googletrans==4.0.0rc1
+googletrans>=4.0.2
 sentence-splitter==1.4
 sentence-transformers==3.2.1
