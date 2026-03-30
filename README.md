@@ -16,6 +16,8 @@
 pip install -r requirements.txt
 ```
 
+说明：本项目默认依赖 `prefect>=2.19,<3.0`，无需安装 `prefect[client]` 额外选项。
+
 ### 2) 安装子项目依赖（每个步骤可单独运行）
 
 ```bash
