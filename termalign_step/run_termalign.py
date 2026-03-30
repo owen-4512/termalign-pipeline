@@ -19,12 +19,26 @@ DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
 
 
 def _ensure_hf_models_downloaded() -> None:
-    """Pre-download required Hugging Face models for hf mode."""
+    """Pre-download required Hugging Face models for hf mode.
+
+    On some Windows environments, creating symlinks in Hugging Face cache can
+    fail without admin/developer privileges (WinError 1314). In that case we
+    gracefully skip the eager pre-download and let Transformers download lazily
+    during `from_pretrained`, which is typically more permissive.
+    """
     from huggingface_hub import snapshot_download
 
-    snapshot_download(repo_id=HF_ZH_MODEL)
-    snapshot_download(repo_id=HF_EN_MODEL)
-    snapshot_download(repo_id=HF_ALIGN_MODEL)
+    for repo_id in (HF_ZH_MODEL, HF_EN_MODEL, HF_ALIGN_MODEL):
+        try:
+            snapshot_download(repo_id=repo_id)
+        except OSError as exc:
+            if getattr(exc, "winerror", None) == 1314:
+                print(
+                    "⚠️ Hugging Face cache symlink permission issue detected on Windows "
+                    f"while pre-downloading '{repo_id}'. Falling back to lazy download during model loading."
+                )
+                return
+            raise
 
 
 def _jsonl_to_tsv(input_jsonl: Path, output_tsv: Path) -> str:
