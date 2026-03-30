@@ -3,4 +3,4 @@ numba==0.60.0
 faiss-cpu>=1.7.2
 googletrans>=4.0.2
 sentence-splitter==1.4
-sentence-transformers==3.2.1
+sentence-transformers>=3.2.1,<6

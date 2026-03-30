@@ -202,7 +202,12 @@ def build_parser() -> argparse.ArgumentParser:
     add_termalign_args(full)
     add_eval_args(full)
     full.add_argument("--use-prefect", action="store_true", help="Run full flow through Prefect")
-    full.add_argument("--isolate-venv", action="store_true", help="Run each step in its own venv via subprocess")
+    full.add_argument(
+        "--isolate-venv",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Run each step in its own venv via subprocess (default: enabled). Use --no-isolate-venv to disable.",
+    )
 
     ba = sub.add_parser("bertalign", help="Run only bertalign")
     add_data_dir_arg(ba)
