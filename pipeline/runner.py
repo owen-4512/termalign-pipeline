@@ -73,10 +73,20 @@ def ensure_spacy_model_in_step_venv(step_name: str, model_name: str) -> None:
     py = ensure_step_venv(step_name, req_file)
     check_code = (
         "import spacy,sys\n"
-        f"spacy.load('{model_name}')\n"
-        "sys.exit(0)\n"
+        "try:\n"
+        f"    spacy.load('{model_name}')\n"
+        "    sys.exit(0)\n"
+        "except Exception:\n"
+        "    sys.exit(1)\n"
     )
-    check_proc = subprocess.run([str(py), "-c", check_code], cwd=PROJECT_ROOT)
+    check_proc = subprocess.run(
+        [str(py), "-c", check_code],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
     if check_proc.returncode == 0:
         return
     logging.info("[venv] spaCy model '%s' missing in %s, downloading...", model_name, step_name)
