@@ -66,6 +66,22 @@ def run_module_in_step_venv(step_name: str, module: str, args_list: list[str]) -
         raise RuntimeError(f"{step_name} failed with code={proc.returncode}")
     return proc
 
+
+def ensure_spacy_model_in_step_venv(step_name: str, model_name: str) -> None:
+    """Ensure a spaCy model is available inside a step venv."""
+    req_file = PROJECT_ROOT / step_name / "requirements.txt"
+    py = ensure_step_venv(step_name, req_file)
+    check_code = (
+        "import spacy,sys\n"
+        f"spacy.load('{model_name}')\n"
+        "sys.exit(0)\n"
+    )
+    check_proc = subprocess.run([str(py), "-c", check_code], cwd=PROJECT_ROOT)
+    if check_proc.returncode == 0:
+        return
+    logging.info("[venv] spaCy model '%s' missing in %s, downloading...", model_name, step_name)
+    subprocess.run([str(py), "-m", "spacy", "download", model_name], check=True, cwd=PROJECT_ROOT)
+
 def resolve_default_paths(data_dir: str) -> dict[str, str]:
     root = Path(data_dir)
     return {
@@ -347,6 +363,9 @@ def run_full(args: argparse.Namespace) -> str:
                 *(["--skip-bert"] if args.skip_bert else []),
             ],
         )
+
+        if str(args.source_lang).lower() == "en" or str(args.target_lang).lower() == "en":
+            ensure_spacy_model_in_step_venv("evaluation_step", "en_core_web_sm")
 
         run_module_in_step_venv(
             "evaluation_step",
