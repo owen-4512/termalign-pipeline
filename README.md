@@ -8,6 +8,168 @@
 
 ---
 
+## Pipeline 目的与默认数据来源
+
+本项目目标是对“术语翻译质量”做文件级评测，核心回答三个问题：
+
+1. 句子是否被正确对齐（`bertalign`）  
+2. 术语是否被正确抽取并配对（`termalign`）  
+3. 配对结果相对参考词典的准确性与一致性如何（`evaluation`）  
+
+当前项目默认的数据语境为 **WMT25 Terminology Track2**，尤其是：  
+`wmt25-terminology/ranking/references/track2/full_data_2016.jsonl`。  
+
+落地到本 pipeline 时，建议把该 JSONL 预处理到标准目录：
+- `data/Task1/source.txt`（源文句段）
+- `data/Task1/target.txt`（目标文句段）
+- `data/Task3/proper_terms.jsonl`（评测词典，中文术语 → 英文参考译法）
+
+---
+
+## 两种运行方式（全流程 vs 分步骤）
+
+### 方式 A：全流程一键运行
+- 命令：`python pipeline/runner.py full`
+- 特点：自动串联 `bertalign -> termalign -> evaluation`。
+- 默认开启 `--isolate-venv`，即每个步骤独立 venv，避免跨步骤依赖冲突。
+
+### 方式 B：分步骤运行
+- 只跑句对齐：`python pipeline/runner.py bertalign ...`
+- 只跑术语抽取/配对：`python pipeline/runner.py termalign ...`
+- 只跑评测：`python pipeline/runner.py evaluation ...`
+
+适用于：
+- 你要替换某一步模型/API；
+- 你要复用中间产物（例如只重跑 evaluation）。
+
+---
+
+## 三个步骤：目的、输入输出、默认模型与可选参数
+
+### Step 1: bertalign（句段对齐）
+- **目的**：把源文与译文切分后做句段级对齐，为术语级配对提供语境单元。  
+- **输入**：
+  - 单文件模式：`source.txt` + `target.txt`
+  - 批量模式：`<base>_zh.txt` / `<base>_en.txt`
+- **输出**：
+  - 单文件：`data/Task2/bertalign.jsonl`（或指定路径）
+  - 批量：`data/Task2/batch_tsv/<base>_zh_en_align.tsv`
+- **默认模型/实现**：
+  - 优先使用 `bertalign`；
+  - 若外部命令不可用，可回退到 1:1 行对齐。
+- **主要参数**：
+  - `--bertalign-max-align`：最大对齐跨度（如 1-2 / 2-1 等）
+  - `--bertalign-top-k`：候选检索数量
+  - `--bertalign-win`：动态规划窗口大小
+  - `--bertalign-src-lang` / `--bertalign-tgt-lang`：语言标记
+  - `--bertalign-batch-data-dir`：批量输入目录
+
+### Step 2: termalign（术语抽取与中英术语配对）
+- **目的**：从对齐句段中抽取中英文术语，并建立术语对齐关系。  
+- **输入**：
+  - 上一步输出（JSONL 或 TSV/TSV目录）
+  - 可选术语表：`dict_zh.txt` / `dict_en.txt`
+- **输出**：
+  - `data/Task3/alignment_details/`：每文件与总汇总明细
+  - `data/Task3/high_confidence/all_alignments_high_conf.tsv`：供 evaluation 使用
+- **默认模型**（`--termalign-mode hf`）：
+  - 中文抽取：`owen4512/bert-base-chinese-finance-term-extractor`
+  - 英文抽取：`owen4512/bert-base-cased-finance-term-extractor`
+  - 术语配对：`owen4512/minilm-finance-term-aligner`
+- **主要参数**：
+  - `--termalign-mode {hf,local,api}`
+  - `--extraction-mode {model,api}`
+  - `--min-pair-confidence`：高置信过滤阈值
+  - `--top-k-pairs`：保留配对数
+  - `--dict-zh-path` / `--dict-en-path`：字典路径
+
+### Step 3: evaluation（准确性 + 一致性 + final score）
+- **目的**：对 termalign 结果打分并输出 summary/debug。  
+- **输入**：
+  - `termalign` 输出（建议 high-confidence TSV）
+  - `proper_terms.jsonl` 作为 gold 词典
+- **输出**：
+  - 终端 summary：`precision`, `consistency`, `final_score`
+  - 文件：`data/results/evaluation_result.json`（默认）
+- **主要参数**：
+  - `--eval-metrics`：`accuracy` / `consistency` / `all`
+  - `--eval-alpha`：一致性权重
+  - `--eval-report-level`：`document|batch|both`
+  - `--eval-debug-log` / `--eval-debug-sublogs-dir`
+
+---
+
+## 数学公式与计算方式（重点）
+
+### 1) Step2 相似度（similarity）
+
+对中文术语向量 \(\mathbf{z}\) 与英文术语向量 \(\mathbf{e}\) 采用余弦相似度：
+
+\[
+\mathrm{sim}(\mathbf{z}, \mathbf{e}) =
+\frac{\mathbf{z}\cdot\mathbf{e}}{\|\mathbf{z}\|\|\mathbf{e}\|+\epsilon}
+\]
+
+其中 \(\epsilon\) 是数值稳定项。对每个中文术语，选择相似度最高的英文术语作为候选配对。  
+`high_confidence` 文件由 `similarity > --min-pair-confidence` 过滤得到。
+
+### 2) Step3 准确性（precision）
+
+对每个术语翻译出现（occurrence），与 gold 候选比较得到分数 \(s_i \in [0,1]\)。  
+加权版本下（权重 \(w_i\) 通常来自 Step2 的 `similarity`）：
+
+\[
+\mathrm{precision}=
+\frac{\sum_i w_i s_i}{\sum_i w_i}
+\]
+
+若无权重则退化为普通平均。
+
+### 3) Step3 一致性（consistency）
+
+对同一源术语的各译法 \(v\) 统计“有效次数”：
+
+\[
+c_v=\sum_{i\in v} w_i
+\]
+
+再计算概率：
+
+\[
+p_v=\frac{c_v}{\sum_u c_u}
+\]
+
+熵：
+
+\[
+H=-\sum_v p_v\log_2 p_v,\quad
+H_{\text{norm}}=\frac{H}{\log_2 |V|}
+\]
+
+一致性分数：
+
+\[
+\mathrm{consistency}=1-H_{\text{norm}}
+\]
+
+单文档时按文档内计算；多文档时自动切换到跨文档一致性。
+
+### 4) Final score
+
+当 `--eval-metrics all` 时：
+
+\[
+\lambda=\mathrm{clip}(\alpha,0,1),\quad
+\mathrm{final\_score}=(1-\lambda)\cdot \mathrm{precision}+\lambda\cdot \mathrm{consistency}
+\]
+
+其中：
+- `alpha` 即 \(\lambda\)：一致性权重；
+- precision 越高代表译法越接近 gold；
+- consistency 越高代表术语使用越稳定。
+
+---
+
 ## 安装
 
 ### 1) 安装总依赖（整条 pipeline 可运行）
