@@ -26,6 +26,13 @@ if str(PROJECT_ROOT) not in sys.path:
 VENV_ROOT = PROJECT_ROOT / ".venvs"
 
 
+def _input_suffix(name: str) -> str:
+    token = (name or "").strip().replace(" ", "_")
+    if "_" in token:
+        token = token.split("_")[-1]
+    return token or "default"
+
+
 def _venv_python(venv_dir: Path) -> Path:
     if os.name == "nt":
         return venv_dir / "Scripts" / "python.exe"
@@ -141,6 +148,21 @@ def apply_data_defaults(args: argparse.Namespace) -> argparse.Namespace:
     for key, value in optional_defaults.items():
         if getattr(args, key, None) is None and Path(value).exists():
             setattr(args, key, value)
+
+    # Auto-route outputs by batch input folder suffix, e.g.:
+    # inputs_gpt -> output_gpt
+    batch_input_dir = getattr(args, "bertalign_batch_data_dir", None) or getattr(args, "inputs_dir", None)
+    if batch_input_dir:
+        suffix = _input_suffix(Path(batch_input_dir).name)
+        bucket = f"output_{suffix}"
+        root = Path(args.data_dir)
+
+        if getattr(args, "bertalign_batch_output_dir", None) is None:
+            args.bertalign_batch_output_dir = str(root / "Task2" / bucket)
+        if getattr(args, "termalign_output", None) == resolve_default_paths(args.data_dir)["termalign_output"]:
+            args.termalign_output = str(root / "Task3" / bucket / "high_confidence" / "all_alignments_high_conf.tsv")
+        if getattr(args, "evaluation_output", None) == resolve_default_paths(args.data_dir)["evaluation_output"]:
+            args.evaluation_output = str(root / "results" / bucket / "evaluation_result.json")
     return args
 
 
