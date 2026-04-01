@@ -114,6 +114,14 @@ def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer.writerows(rows)
 
 
+def _remove_legacy_detail_subdirs(details_dir: Path) -> None:
+    """Remove legacy nested folders that are no longer part of the output spec."""
+    for name in ("all_files", "per_file", "per_file_high_conf"):
+        legacy = details_dir / name
+        if legacy.exists():
+            shutil.rmtree(legacy, ignore_errors=True)
+
+
 def _to_std_row(item: dict[str, Any], source_file: str, source_sentence: str, target_sentence: str) -> dict[str, Any]:
     return {
         "source_file": source_file,
@@ -227,6 +235,7 @@ def run_termalign_api(
         high_src = high_main
 
     shutil.copy2(high_src, high_conf_output)
+    _remove_legacy_detail_subdirs(details_dir)
     return str(high_conf_output)
 
 

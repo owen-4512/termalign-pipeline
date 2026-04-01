@@ -213,6 +213,14 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
     return all_path, all_high_path
 
 
+def _remove_legacy_detail_subdirs(details_dir: Path) -> None:
+    """Remove legacy nested folders that are no longer part of the output spec."""
+    for name in ("all_files", "per_file", "per_file_high_conf"):
+        legacy = details_dir / name
+        if legacy.exists():
+            shutil.rmtree(legacy, ignore_errors=True)
+
+
 def run_termalign(
     bertalign_output: str,
     output_file: str | None = None,
@@ -279,6 +287,7 @@ def run_termalign(
         if src is None:
             raise RuntimeError(f"No alignment TSV generated under {details_dir}")
         shutil.copy2(src, high_conf_output)
+        _remove_legacy_detail_subdirs(details_dir)
 
     return str(high_conf_output)
 
