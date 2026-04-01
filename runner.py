@@ -273,6 +273,7 @@ def run_full(args: argparse.Namespace) -> str:
 
     if args.use_prefect:
         from pipeline.prefect_flow import term_pipeline
+        logging.info("Execution mode: prefect")
         return term_pipeline(
             source_file=args.source_file,
             target_file=args.target_file,
@@ -280,11 +281,199 @@ def run_full(args: argparse.Namespace) -> str:
             bertalign_output=args.bertalign_output,
             termalign_output=args.termalign_output,
             evaluation_output=args.evaluation_output,
+            bertalign_command=args.bertalign_command,
+            bertalign_default_confidence=args.bertalign_default_confidence,
+            bertalign_max_align=args.bertalign_max_align,
+            bertalign_top_k=args.bertalign_top_k,
+            bertalign_win=args.bertalign_win,
+            bertalign_src_lang=args.bertalign_src_lang,
+            bertalign_tgt_lang=args.bertalign_tgt_lang,
+            bertalign_batch_data_dir=args.bertalign_batch_data_dir,
+            bertalign_batch_output_dir=args.bertalign_batch_output_dir,
+            bertalign_batch_strict=args.bertalign_batch_strict,
+            extraction_mode=args.extraction_mode,
+            termalign_mode=args.termalign_mode,
+            min_term_confidence=args.min_term_confidence,
+            min_pair_confidence=args.min_pair_confidence,
+            source_lang=args.source_lang,
+            target_lang=args.target_lang,
+            top_k_pairs=args.top_k_pairs,
+            aligner_model=args.aligner_model,
+            zh_extractor_model=args.zh_extractor_model,
+            en_extractor_model=args.en_extractor_model,
+            api_endpoint=args.api_endpoint,
+            api_key=args.api_key,
+            api_model=args.api_model,
+            api_prompt_file=args.api_prompt_file,
+            device=args.device,
+            dict_zh_path=args.dict_zh_path,
+            dict_en_path=args.dict_en_path,
+            skip_bert=args.skip_bert,
+            eval_mode=args.eval_mode,
+            eval_target_txt=args.eval_target_txt,
+            eval_target_dir=args.eval_target_dir,
+            eval_report_level=args.eval_report_level,
+            eval_metrics=args.eval_metrics,
+            eval_alpha=args.eval_alpha,
+            eval_beta=args.eval_beta,
+            eval_debug_log=args.eval_debug_log,
+            eval_debug_sublogs_dir=args.eval_debug_sublogs_dir,
         )
 
-    # keep original behavior hooks (sequential or subprocess) in project-specific runner
-    # this helper runner returns target output path to keep orchestration simple.
-    return args.evaluation_output
+    if args.isolate_venv:
+        logging.info("Execution mode: subprocess-per-step venv")
+        if args.bertalign_batch_data_dir:
+            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
+            run_module_in_step_venv(
+                "bertalign_step",
+                "bertalign_step.batch_align",
+                [
+                    "--data-dir", args.bertalign_batch_data_dir,
+                    "--output-dir", batch_output_dir,
+                    "--src-lang", args.bertalign_src_lang,
+                    "--tgt-lang", args.bertalign_tgt_lang,
+                    "--max-align", str(args.bertalign_max_align),
+                    "--top-k", str(args.bertalign_top_k),
+                    "--win", str(args.bertalign_win),
+                    *(["--strict"] if args.bertalign_batch_strict else []),
+                ],
+            )
+            ba_out = batch_output_dir
+        else:
+            run_module_in_step_venv(
+                "bertalign_step",
+                "bertalign_step.run_bertalign",
+                [
+                    "--source-file", args.source_file,
+                    "--target-file", args.target_file,
+                    "--output-file", args.bertalign_output,
+                    "--max-align", str(args.bertalign_max_align),
+                    "--top-k", str(args.bertalign_top_k),
+                    "--win", str(args.bertalign_win),
+                    "--src-lang", args.bertalign_src_lang,
+                    "--tgt-lang", args.bertalign_tgt_lang,
+                ],
+            )
+            ba_out = args.bertalign_output
+
+        run_module_in_step_venv(
+            "termalign_step",
+            "termalign_step.run_termalign",
+            [
+                "--bertalign-output", ba_out,
+                "--output-file", args.termalign_output,
+                "--extraction-mode", args.extraction_mode,
+                "--termalign-mode", args.termalign_mode,
+                "--min-pair-confidence", str(args.min_pair_confidence),
+                "--top-k-pairs", str(args.top_k_pairs),
+                "--aligner-model", args.aligner_model,
+                "--zh-extractor-model", args.zh_extractor_model,
+                "--en-extractor-model", args.en_extractor_model,
+                *(["--api-endpoint", args.api_endpoint] if args.api_endpoint else []),
+                *(["--api-key", args.api_key] if args.api_key else []),
+                *(["--api-model", args.api_model] if args.api_model else []),
+                *(["--api-prompt-file", args.api_prompt_file] if args.api_prompt_file else []),
+                *(["--dict-zh-path", args.dict_zh_path] if args.dict_zh_path else []),
+                *(["--dict-en-path", args.dict_en_path] if args.dict_en_path else []),
+                *(["--skip-bert"] if args.skip_bert else []),
+            ],
+        )
+
+        if str(args.source_lang).lower() == "en" or str(args.target_lang).lower() == "en":
+            ensure_spacy_model_in_step_venv("evaluation_step", "en_core_web_sm")
+
+        run_module_in_step_venv(
+            "evaluation_step",
+            "evaluation_step.evaluate_terms",
+            [
+                "--termalign-output", args.termalign_output,
+                "--dictionary-path", args.dictionary_path,
+                "--output-file", args.evaluation_output,
+                "--mode", args.eval_mode,
+                "--report-level", args.eval_report_level,
+                "--alpha", str(args.eval_alpha),
+                "--beta", str(args.eval_beta),
+                "--metrics", *args.eval_metrics,
+                *(["--target-txt", args.eval_target_txt] if args.eval_target_txt else []),
+                *(["--target-dir", args.eval_target_dir] if args.eval_target_dir else []),
+                *(["--debug-log", args.eval_debug_log] if args.eval_debug_log else []),
+                *(["--debug-sublogs-dir", args.eval_debug_sublogs_dir] if args.eval_debug_sublogs_dir else []),
+            ],
+        )
+        return args.evaluation_output
+
+    logging.info("Execution mode: sequential")
+    from bertalign_step.run_bertalign import run_bertalign
+    from bertalign_step.batch_align import run_batch_alignment
+    from termalign_step.run_termalign import run_termalign
+    from evaluation_step.evaluate_terms import evaluate_terms
+
+    if args.bertalign_batch_data_dir:
+        batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
+        code = run_batch_alignment(
+            data_dir=args.bertalign_batch_data_dir,
+            output_dir=batch_output_dir,
+            src_lang=args.bertalign_src_lang,
+            tgt_lang=args.bertalign_tgt_lang,
+            max_align=args.bertalign_max_align,
+            top_k=args.bertalign_top_k,
+            win=args.bertalign_win,
+            strict=args.bertalign_batch_strict,
+        )
+        if code != 0:
+            raise RuntimeError(f"Batch bertalign failed with exit code={code}")
+        ba_out = batch_output_dir
+    else:
+        ba_out = run_bertalign(
+            source_file=args.source_file,
+            target_file=args.target_file,
+            output_file=args.bertalign_output,
+            external_command=args.bertalign_command,
+            default_confidence=args.bertalign_default_confidence,
+            max_align=args.bertalign_max_align,
+            top_k=args.bertalign_top_k,
+            win=args.bertalign_win,
+            src_lang=args.bertalign_src_lang,
+            tgt_lang=args.bertalign_tgt_lang,
+        )
+
+    ta_out = run_termalign(
+        bertalign_output=ba_out,
+        output_file=args.termalign_output,
+        extraction_mode=args.extraction_mode,
+        termalign_mode=args.termalign_mode,
+        min_term_confidence=args.min_term_confidence,
+        min_pair_confidence=args.min_pair_confidence,
+        source_lang=args.source_lang,
+        target_lang=args.target_lang,
+        top_k_pairs=args.top_k_pairs,
+        aligner_model=args.aligner_model,
+        zh_extractor_model=args.zh_extractor_model,
+        en_extractor_model=args.en_extractor_model,
+        api_endpoint=args.api_endpoint,
+        api_key=args.api_key,
+        api_model=args.api_model,
+        api_prompt_file=args.api_prompt_file,
+        device=args.device,
+        dict_zh_path=args.dict_zh_path,
+        dict_en_path=args.dict_en_path,
+        skip_bert=args.skip_bert,
+    )
+
+    return evaluate_terms(
+        termalign_output=ta_out,
+        dictionary_path=args.dictionary_path,
+        output_file=args.evaluation_output,
+        mode=args.eval_mode,
+        target_txt=args.eval_target_txt,
+        target_dir=args.eval_target_dir,
+        report_level=args.eval_report_level,
+        metrics=args.eval_metrics,
+        alpha=args.eval_alpha,
+        beta=args.eval_beta,
+        debug_log=args.eval_debug_log,
+        debug_sublogs_dir=args.eval_debug_sublogs_dir,
+    )
 
 
 def main() -> None:
@@ -318,7 +507,99 @@ def main() -> None:
         print(out)
         return
 
-    # passthrough for step commands in project-specific runner
+    args = apply_data_defaults(args)
+    if getattr(args, "inputs_dir", None) and not getattr(args, "bertalign_batch_data_dir", None):
+        args.bertalign_batch_data_dir = args.inputs_dir
+    setup_run_logger(args.logs_dir, args.command)
+    logging.info("Running command=%s data_dir=%s", args.command, args.data_dir)
+
+    if args.command == "bertalign":
+        from bertalign_step.run_bertalign import run_bertalign
+        from bertalign_step.batch_align import run_batch_alignment
+        if args.bertalign_batch_data_dir:
+            batch_output_dir = args.bertalign_batch_output_dir or str(Path(args.data_dir) / "Task2" / "batch_tsv")
+            code = run_batch_alignment(
+                data_dir=args.bertalign_batch_data_dir,
+                output_dir=batch_output_dir,
+                src_lang=args.bertalign_src_lang,
+                tgt_lang=args.bertalign_tgt_lang,
+                max_align=args.bertalign_max_align,
+                top_k=args.bertalign_top_k,
+                win=args.bertalign_win,
+                strict=args.bertalign_batch_strict,
+            )
+            if code != 0:
+                raise RuntimeError(f"Batch bertalign failed with exit code={code}")
+            out = batch_output_dir
+        else:
+            ensure_parent_dirs(args.bertalign_output)
+            out = run_bertalign(
+                source_file=args.source_file,
+                target_file=args.target_file,
+                output_file=args.bertalign_output,
+                external_command=args.bertalign_command,
+                default_confidence=args.bertalign_default_confidence,
+                max_align=args.bertalign_max_align,
+                top_k=args.bertalign_top_k,
+                win=args.bertalign_win,
+                src_lang=args.bertalign_src_lang,
+                tgt_lang=args.bertalign_tgt_lang,
+            )
+        logging.info("bertalign finished. Output: %s", out)
+        print(out)
+        return
+
+    if args.command == "termalign":
+        from termalign_step.run_termalign import run_termalign
+        ensure_parent_dirs(args.termalign_output)
+        ensure_alignment_details_dirs(args.termalign_output)
+        out = run_termalign(
+            bertalign_output=args.bertalign_output,
+            output_file=args.termalign_output,
+            extraction_mode=args.extraction_mode,
+            termalign_mode=args.termalign_mode,
+            min_term_confidence=args.min_term_confidence,
+            min_pair_confidence=args.min_pair_confidence,
+            source_lang=args.source_lang,
+            target_lang=args.target_lang,
+            top_k_pairs=args.top_k_pairs,
+            aligner_model=args.aligner_model,
+            zh_extractor_model=args.zh_extractor_model,
+            en_extractor_model=args.en_extractor_model,
+            api_endpoint=args.api_endpoint,
+            api_key=args.api_key,
+            api_model=args.api_model,
+            api_prompt_file=args.api_prompt_file,
+            device=args.device,
+            dict_zh_path=args.dict_zh_path,
+            dict_en_path=args.dict_en_path,
+            skip_bert=args.skip_bert,
+        )
+        logging.info("termalign finished. Output: %s", out)
+        print(out)
+        return
+
+    if args.command == "evaluation":
+        from evaluation_step.evaluate_terms import evaluate_terms
+        ensure_parent_dirs(args.evaluation_output)
+        out = evaluate_terms(
+            termalign_output=args.termalign_output,
+            dictionary_path=args.dictionary_path,
+            output_file=args.evaluation_output,
+            mode=args.eval_mode,
+            target_txt=args.eval_target_txt,
+            target_dir=args.eval_target_dir,
+            report_level=args.eval_report_level,
+            metrics=args.eval_metrics,
+            alpha=args.eval_alpha,
+            beta=args.eval_beta,
+            debug_log=args.eval_debug_log,
+            debug_sublogs_dir=args.eval_debug_sublogs_dir,
+        )
+        logging.info("evaluation finished. Output: %s", out)
+        print(out)
+        return
+
     parser.error(f"Unsupported command: {args.command}")
 
 
