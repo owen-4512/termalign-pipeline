@@ -24,7 +24,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-DEFAULT_OUTPUT_FILE = Path("data") / "Task3" / "high_confidence" / "all_alignments_high_conf.tsv"
+STANDALONE_TASK3_ROOT = Path(__file__).resolve().parent / "data" / "task3"
 TSV_FIELDS = [
     "source_file",
     "zh_term",
@@ -80,6 +80,32 @@ def _resolve_output_dirs(output_file: Path, output_dir: str | None) -> tuple[Pat
     return output_file, output_file.parent
 
 
+def _suffix_from_task1_input(task1_input_dir: str | None) -> str:
+    if not task1_input_dir:
+        return "default"
+    token = Path(task1_input_dir).name.strip().replace(" ", "_")
+    if "_" in token:
+        token = token.split("_")[-1]
+    return token or "default"
+
+
+def _resolve_task3_root(pipeline_run: bool, evaluation_pipeline_root: str | None) -> Path:
+    if pipeline_run:
+        base = Path(evaluation_pipeline_root).resolve() if evaluation_pipeline_root else Path.cwd().resolve()
+        return base / "data" / "task3"
+    return STANDALONE_TASK3_ROOT
+
+
+def _resolve_default_output_file(
+    task1_input_dir: str | None,
+    pipeline_run: bool,
+    evaluation_pipeline_root: str | None,
+) -> Path:
+    suffix = _suffix_from_task1_input(task1_input_dir)
+    task3_root = _resolve_task3_root(pipeline_run, evaluation_pipeline_root)
+    return task3_root / f"outputs_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
+
+
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
@@ -105,7 +131,7 @@ def _to_std_row(item: dict[str, Any], source_file: str, source_sentence: str, ta
 
 def run_termalign_api(
     bertalign_output: str,
-    output_file: str = str(DEFAULT_OUTPUT_FILE),
+    output_file: str | None = None,
     api_endpoint: str = "",
     api_key: str | None = None,
     min_pair_confidence: float = 0.5,
@@ -114,6 +140,9 @@ def run_termalign_api(
     api_model: str | None = None,
     prompt_text: str | None = None,
     output_dir: str | None = None,
+    task1_input_dir: str | None = None,
+    pipeline_run: bool = False,
+    evaluation_pipeline_root: str | None = None,
 ) -> str:
     import requests
 
@@ -121,7 +150,12 @@ def run_termalign_api(
         raise ValueError("api_endpoint is required")
 
     rows = _load_rows(Path(bertalign_output))
-    high_conf_output, details_dir = _resolve_output_dirs(Path(output_file), output_dir)
+    resolved_output = Path(output_file) if output_file else _resolve_default_output_file(
+        task1_input_dir=task1_input_dir,
+        pipeline_run=pipeline_run,
+        evaluation_pipeline_root=evaluation_pipeline_root,
+    )
+    high_conf_output, details_dir = _resolve_output_dirs(resolved_output, output_dir)
     high_conf_output.parent.mkdir(parents=True, exist_ok=True)
     details_dir.mkdir(parents=True, exist_ok=True)
 
@@ -199,8 +233,11 @@ def run_termalign_api(
 def main() -> None:
     parser = argparse.ArgumentParser(description="TermAlign API mode")
     parser.add_argument("--bertalign-output", required=True)
-    parser.add_argument("--output-file", default=str(DEFAULT_OUTPUT_FILE))
+    parser.add_argument("--output-file", default=None)
     parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--task1-input-dir", default=None, help="Task1 input folder used to derive outputs_xxx suffix")
+    parser.add_argument("--pipeline-run", action="store_true", help="Write outputs under evaluation_pipeline/data/task3")
+    parser.add_argument("--evaluation-pipeline-root", default=None, help="Evaluation pipeline root path")
     parser.add_argument("--api-endpoint", required=True)
     parser.add_argument("--api-key", default=None)
     parser.add_argument("--min-pair-confidence", type=float, default=0.5)
@@ -222,6 +259,9 @@ def main() -> None:
         api_model=args.api_model,
         prompt_text=prompt_text,
         output_dir=args.output_dir,
+        task1_input_dir=args.task1_input_dir,
+        pipeline_run=args.pipeline_run,
+        evaluation_pipeline_root=args.evaluation_pipeline_root,
     )
 
 

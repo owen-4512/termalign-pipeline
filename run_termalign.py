@@ -18,7 +18,7 @@ HF_ALIGN_MODEL = "owen4512/minilm-finance-term-aligner"
 DEFAULT_TERM_LIST_DIR = Path(__file__).resolve().parent / "term_list"
 DEFAULT_ZH_TERM_LIST = DEFAULT_TERM_LIST_DIR / "zh_terms.txt"
 DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
-DEFAULT_OUTPUT_FILE = Path("data") / "Task3" / "high_confidence" / "all_alignments_high_conf.tsv"
+STANDALONE_TASK3_ROOT = Path(__file__).resolve().parent / "data" / "task3"
 
 
 def _parse_version(version: str) -> tuple[int, ...]:
@@ -114,6 +114,32 @@ def _resolve_output_dirs(output_file: Path, output_dir: str | None) -> tuple[Pat
     return output_file, output_file.parent
 
 
+def _suffix_from_task1_input(task1_input_dir: str | None) -> str:
+    if not task1_input_dir:
+        return "default"
+    token = Path(task1_input_dir).name.strip().replace(" ", "_")
+    if "_" in token:
+        token = token.split("_")[-1]
+    return token or "default"
+
+
+def _resolve_task3_root(pipeline_run: bool, evaluation_pipeline_root: str | None) -> Path:
+    if pipeline_run:
+        base = Path(evaluation_pipeline_root).resolve() if evaluation_pipeline_root else Path.cwd().resolve()
+        return base / "data" / "task3"
+    return STANDALONE_TASK3_ROOT
+
+
+def _resolve_default_output_file(
+    task1_input_dir: str | None,
+    pipeline_run: bool,
+    evaluation_pipeline_root: str | None,
+) -> Path:
+    suffix = _suffix_from_task1_input(task1_input_dir)
+    task3_root = _resolve_task3_root(pipeline_run, evaluation_pipeline_root)
+    return task3_root / f"outputs_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
+
+
 def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -> tuple[Path | None, Path | None]:
     import pandas as pd
 
@@ -179,7 +205,7 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
 
 def run_termalign(
     bertalign_output: str,
-    output_file: str,
+    output_file: str | None = None,
     output_dir: str | None = None,
     extraction_mode: str = "model",
     termalign_mode: str = "hf",
@@ -199,6 +225,9 @@ def run_termalign(
     skip_bert: bool = False,
     api_model: str | None = None,
     api_prompt_file: str | None = None,
+    task1_input_dir: str | None = None,
+    pipeline_run: bool = False,
+    evaluation_pipeline_root: str | None = None,
 ) -> str:
     if termalign_mode == "hf":
         _ensure_embedding_runtime_versions()
@@ -207,7 +236,11 @@ def run_termalign(
     dict_zh_path, dict_en_path = _resolve_default_term_lists(dict_zh_path, dict_en_path)
 
     input_data = Path(bertalign_output)
-    output_path = Path(output_file)
+    output_path = Path(output_file) if output_file else _resolve_default_output_file(
+        task1_input_dir=task1_input_dir,
+        pipeline_run=pipeline_run,
+        evaluation_pipeline_root=evaluation_pipeline_root,
+    )
     high_conf_output, details_dir = _resolve_output_dirs(output_path, output_dir)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -243,8 +276,11 @@ def run_termalign(
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="TermAlign step")
     parser.add_argument("--bertalign-output", required=True)
-    parser.add_argument("--output-file", default=str(DEFAULT_OUTPUT_FILE))
+    parser.add_argument("--output-file", default=None)
     parser.add_argument("--output-dir", default=None)
+    parser.add_argument("--task1-input-dir", default=None, help="Task1 input folder used to derive outputs_xxx suffix")
+    parser.add_argument("--pipeline-run", action="store_true", help="Write outputs under evaluation_pipeline/data/task3")
+    parser.add_argument("--evaluation-pipeline-root", default=None, help="Evaluation pipeline root path")
     parser.add_argument("--extraction-mode", choices=["model", "api"], default="model")
     parser.add_argument("--termalign-mode", choices=["api", "local", "hf"], default="hf")
     parser.add_argument("--min-term-confidence", type=float, default=0.5)
@@ -290,6 +326,9 @@ def main() -> None:
         skip_bert=args.skip_bert,
         api_model=args.api_model,
         api_prompt_file=args.api_prompt_file,
+        task1_input_dir=args.task1_input_dir,
+        pipeline_run=args.pipeline_run,
+        evaluation_pipeline_root=args.evaluation_pipeline_root,
     )
 
 
