@@ -150,7 +150,7 @@ def _resolve_default_output_file(
     return task3_root / f"output_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
 
 
-def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -> tuple[Path | None, Path | None]:
+def _organize_alignment_outputs(source_dir: Path, details_dir: Path, min_pair_confidence: float) -> tuple[Path | None, Path | None]:
     import pandas as pd
 
     generated_names = {
@@ -162,8 +162,8 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
     high_rows = []
     per_file_outputs = 0
 
-    for f in details_dir.rglob("*.tsv"):
-        if f.parent == details_dir and f.name in generated_names:
+    for f in source_dir.rglob("*.tsv"):
+        if f.parent == source_dir and f.name in generated_names:
             continue
         if f.parent.name == "high_confidence":
             continue
@@ -267,6 +267,8 @@ def run_termalign(
         details_dir.mkdir(parents=True, exist_ok=True)
         high_conf_output.parent.mkdir(parents=True, exist_ok=True)
 
+        raw_details_dir = Path(tmp) / "raw_alignment_details"
+        raw_details_dir.mkdir(parents=True, exist_ok=True)
         run_pipeline(
             input_path=prepared,
             dict_zh_path=dict_zh_path,
@@ -275,11 +277,11 @@ def run_termalign(
             bert_model_en=en_extractor_model,
             embed_model=aligner_model,
             similarity_threshold=min_pair_confidence,
-            output_dir=details_dir,
+            output_dir=raw_details_dir,
             skip_bert=skip_bert,
         )
 
-        all_path, all_high_path = _organize_alignment_outputs(details_dir, min_pair_confidence)
+        all_path, all_high_path = _organize_alignment_outputs(raw_details_dir, details_dir, min_pair_confidence)
 
         src = all_high_path or all_path
         if src is None:
