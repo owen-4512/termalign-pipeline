@@ -182,14 +182,23 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
             df["similarity"] = 0.0
 
         base = f.stem
-        out_all = details_dir / f"{base}_all_alignment.tsv"
-        out_high = details_dir / f"{base}_high_conf.tsv"
+        out_all = details_dir / f"{base}_alignments.tsv"
+        out_high = details_dir / f"{base}_alignments_high_conf.tsv"
 
         df.to_csv(out_all, sep="\t", index=False)
+        # backward-compatible filenames
+        df.to_csv(details_dir / f"{base}_all_alignment.tsv", sep="\t", index=False)
         df_high = df[df["similarity"] >= min_pair_confidence]
         if not df_high.empty:
             df_high.to_csv(out_high, sep="\t", index=False)
+            # backward-compatible filename
+            df_high.to_csv(details_dir / f"{base}_high_conf.tsv", sep="\t", index=False)
             high_rows.append(df_high)
+
+        if "zh_term" in df.columns:
+            df[["zh_term"]].dropna().drop_duplicates().to_csv(details_dir / f"{base}_terms.zh.tsv", sep="\t", index=False)
+        if "en_term" in df.columns:
+            df[["en_term"]].dropna().drop_duplicates().to_csv(details_dir / f"{base}_terms.en.tsv", sep="\t", index=False)
 
         all_rows.append(df)
         per_file_outputs += 1
@@ -200,6 +209,10 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
         all_df = pd.concat(all_rows, ignore_index=True)
         all_path = details_dir / "all_alignments.tsv"
         all_df.to_csv(all_path, sep="\t", index=False)
+        if "zh_term" in all_df.columns:
+            all_df[["zh_term"]].dropna().drop_duplicates().to_csv(details_dir / "all_terms.zh.tsv", sep="\t", index=False)
+        if "en_term" in all_df.columns:
+            all_df[["en_term"]].dropna().drop_duplicates().to_csv(details_dir / "all_terms.en.tsv", sep="\t", index=False)
 
         if high_rows:
             all_high_df = pd.concat(high_rows, ignore_index=True)
@@ -211,14 +224,6 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
     if per_file_outputs == 0:
         return None, None
     return all_path, all_high_path
-
-
-def _remove_legacy_detail_subdirs(details_dir: Path) -> None:
-    """Remove legacy nested folders that are no longer part of the output spec."""
-    for name in ("all_files", "per_file", "per_file_high_conf"):
-        legacy = details_dir / name
-        if legacy.exists():
-            shutil.rmtree(legacy, ignore_errors=True)
 
 
 def run_termalign(
@@ -287,7 +292,6 @@ def run_termalign(
         if src is None:
             raise RuntimeError(f"No alignment TSV generated under {details_dir}")
         shutil.copy2(src, high_conf_output)
-        _remove_legacy_detail_subdirs(details_dir)
 
     return str(high_conf_output)
 

@@ -73,6 +73,8 @@ def _load_rows(bertalign_output: Path) -> list[dict[str, Any]]:
 
 
 def _resolve_output_dirs(output_file: Path, output_dir: str | None) -> tuple[Path, Path]:
+    if output_dir:
+        return output_file, Path(output_dir)
     # To avoid generating files in unexpected locations, always colocate
     # alignment_details with output_file when output_file is provided.
     if output_file.parent.name == "high_confidence":
@@ -112,14 +114,6 @@ def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(f, fieldnames=TSV_FIELDS, delimiter="\t")
         writer.writeheader()
         writer.writerows(rows)
-
-
-def _remove_legacy_detail_subdirs(details_dir: Path) -> None:
-    """Remove legacy nested folders that are no longer part of the output spec."""
-    for name in ("all_files", "per_file", "per_file_high_conf"):
-        legacy = details_dir / name
-        if legacy.exists():
-            shutil.rmtree(legacy, ignore_errors=True)
 
 
 def _to_std_row(item: dict[str, Any], source_file: str, source_sentence: str, target_sentence: str) -> dict[str, Any]:
@@ -214,17 +208,38 @@ def run_termalign_api(
         file_rows.sort(key=lambda x: float(x["similarity"]), reverse=True)
         if top_k_pairs > 0:
             file_rows = file_rows[:top_k_pairs]
+        _write_tsv(details_dir / f"{source_file}_alignments.tsv", file_rows)
+        # backward-compatible filename
         _write_tsv(details_dir / f"{source_file}_all_alignment.tsv", file_rows)
 
         high_rows = [r for r in file_rows if float(r["similarity"]) >= min_pair_confidence]
         if high_rows:
+            _write_tsv(details_dir / f"{source_file}_alignments_high_conf.tsv", high_rows)
+            # backward-compatible filename
             _write_tsv(details_dir / f"{source_file}_high_conf.tsv", high_rows)
             all_high_rows.extend(high_rows)
+
+        _write_tsv(
+            details_dir / f"{source_file}_terms.zh.tsv",
+            [{"zh_term": t, **{k: "" for k in TSV_FIELDS if k != "zh_term"}} for t in sorted({r["zh_term"] for r in file_rows if r.get("zh_term")})],
+        )
+        _write_tsv(
+            details_dir / f"{source_file}_terms.en.tsv",
+            [{"en_term": t, **{k: "" for k in TSV_FIELDS if k != "en_term"}} for t in sorted({r["en_term"] for r in file_rows if r.get("en_term")})],
+        )
 
         all_rows.extend(file_rows)
 
     all_rows.sort(key=lambda x: float(x["similarity"]), reverse=True)
     _write_tsv(details_dir / "all_alignments.tsv", all_rows)
+    _write_tsv(
+        details_dir / "all_terms.zh.tsv",
+        [{"zh_term": t, **{k: "" for k in TSV_FIELDS if k != "zh_term"}} for t in sorted({r["zh_term"] for r in all_rows if r.get("zh_term")})],
+    )
+    _write_tsv(
+        details_dir / "all_terms.en.tsv",
+        [{"en_term": t, **{k: "" for k in TSV_FIELDS if k != "en_term"}} for t in sorted({r["en_term"] for r in all_rows if r.get("en_term")})],
+    )
 
     high_src = details_dir / "all_alignments.tsv"
     if all_high_rows:
@@ -235,7 +250,6 @@ def run_termalign_api(
         high_src = high_main
 
     shutil.copy2(high_src, high_conf_output)
-    _remove_legacy_detail_subdirs(details_dir)
     return str(high_conf_output)
 
 
