@@ -18,7 +18,7 @@ HF_ALIGN_MODEL = "owen4512/minilm-finance-term-aligner"
 DEFAULT_TERM_LIST_DIR = Path(__file__).resolve().parent / "term_list"
 DEFAULT_ZH_TERM_LIST = DEFAULT_TERM_LIST_DIR / "zh_terms.txt"
 DEFAULT_EN_TERM_LIST = DEFAULT_TERM_LIST_DIR / "en_terms.txt"
-STANDALONE_TASK3_ROOT = Path(__file__).resolve().parent / "data" / "task3"
+STANDALONE_TASK3_ROOT = Path(__file__).resolve().parent / "data" / "Task3"
 
 
 def _parse_version(version: str) -> tuple[int, ...]:
@@ -107,8 +107,8 @@ def _resolve_default_term_lists(dict_zh_path: str | None, dict_en_path: str | No
 
 
 def _resolve_output_dirs(output_file: Path, output_dir: str | None) -> tuple[Path, Path]:
-    if output_dir:
-        return output_file, Path(output_dir)
+    # To avoid generating files in unexpected locations, always colocate
+    # alignment_details with output_file when output_file is provided.
     if output_file.parent.name == "high_confidence":
         return output_file, output_file.parent.parent / "alignment_details"
     return output_file, output_file.parent
@@ -126,7 +126,7 @@ def _suffix_from_task1_input(task1_input_dir: str | None) -> str:
 def _resolve_task3_root(pipeline_run: bool, evaluation_pipeline_root: str | None) -> Path:
     if pipeline_run:
         base = Path(evaluation_pipeline_root).resolve() if evaluation_pipeline_root else Path.cwd().resolve()
-        return base / "data" / "task3"
+        return base / "data" / "Task3"
     return STANDALONE_TASK3_ROOT
 
 
@@ -137,7 +137,7 @@ def _resolve_default_output_file(
 ) -> Path:
     suffix = _suffix_from_task1_input(task1_input_dir)
     task3_root = _resolve_task3_root(pipeline_run, evaluation_pipeline_root)
-    return task3_root / f"outputs_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
+    return task3_root / f"output_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
 
 
 def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -> tuple[Path | None, Path | None]:
