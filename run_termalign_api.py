@@ -209,14 +209,10 @@ def run_termalign_api(
         if top_k_pairs > 0:
             file_rows = file_rows[:top_k_pairs]
         _write_tsv(details_dir / f"{source_file}_alignments.tsv", file_rows)
-        # backward-compatible filename
-        _write_tsv(details_dir / f"{source_file}_all_alignment.tsv", file_rows)
 
         high_rows = [r for r in file_rows if float(r["similarity"]) >= min_pair_confidence]
         if high_rows:
             _write_tsv(details_dir / f"{source_file}_alignments_high_conf.tsv", high_rows)
-            # backward-compatible filename
-            _write_tsv(details_dir / f"{source_file}_high_conf.tsv", high_rows)
             all_high_rows.extend(high_rows)
 
         _write_tsv(
@@ -246,7 +242,6 @@ def run_termalign_api(
         all_high_rows.sort(key=lambda x: float(x["similarity"]), reverse=True)
         high_main = details_dir / "all_alignments_high_conf.tsv"
         _write_tsv(high_main, all_high_rows)
-        _write_tsv(details_dir / "all_allignments_high_conf.tsv", all_high_rows)
         high_src = high_main
 
     shutil.copy2(high_src, high_conf_output)

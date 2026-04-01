@@ -156,7 +156,6 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
     generated_names = {
         "all_alignments.tsv",
         "all_alignments_high_conf.tsv",
-        "all_allignments_high_conf.tsv",
     }
 
     all_rows = []
@@ -186,13 +185,9 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
         out_high = details_dir / f"{base}_alignments_high_conf.tsv"
 
         df.to_csv(out_all, sep="\t", index=False)
-        # backward-compatible filenames
-        df.to_csv(details_dir / f"{base}_all_alignment.tsv", sep="\t", index=False)
         df_high = df[df["similarity"] >= min_pair_confidence]
         if not df_high.empty:
             df_high.to_csv(out_high, sep="\t", index=False)
-            # backward-compatible filename
-            df_high.to_csv(details_dir / f"{base}_high_conf.tsv", sep="\t", index=False)
             high_rows.append(df_high)
 
         if "zh_term" in df.columns:
@@ -218,8 +213,6 @@ def _organize_alignment_outputs(details_dir: Path, min_pair_confidence: float) -
             all_high_df = pd.concat(high_rows, ignore_index=True)
             all_high_path = details_dir / "all_alignments_high_conf.tsv"
             all_high_df.to_csv(all_high_path, sep="\t", index=False)
-            # Keep compatibility with requested legacy typo file name.
-            all_high_df.to_csv(details_dir / "all_allignments_high_conf.tsv", sep="\t", index=False)
 
     if per_file_outputs == 0:
         return None, None
