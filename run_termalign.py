@@ -53,8 +53,18 @@ def _ensure_hf_models_downloaded() -> tuple[str, str, str]:
         HF_ALIGN_MODEL: HF_ALIGN_MODEL,
     }
 
+    def _looks_downloaded(model_dir: Path) -> bool:
+        if not model_dir.exists() or not model_dir.is_dir():
+            return False
+        # Shared markers among HF model snapshots.
+        marker_files = ("config.json", "tokenizer_config.json", "modules.json", "model.safetensors")
+        return any((model_dir / m).exists() for m in marker_files)
+
     for repo_id in (HF_ZH_MODEL, HF_EN_MODEL, HF_ALIGN_MODEL):
         local_dir = root / repo_id.replace("/", "--")
+        if _looks_downloaded(local_dir):
+            resolved[repo_id] = str(local_dir)
+            continue
         try:
             local_dir.parent.mkdir(parents=True, exist_ok=True)
             snapshot_download(repo_id=repo_id, local_dir=str(local_dir))
