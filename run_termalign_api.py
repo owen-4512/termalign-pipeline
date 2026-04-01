@@ -108,6 +108,20 @@ def _resolve_default_output_file(
     return task3_root / f"output_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
 
 
+def _canonical_base(name: str) -> str:
+    base = name
+    for suffix in ("_alignments_high_conf", "_alignments", "_high_conf", "_terms.zh", "_terms.en", "_terms_zh", "_terms_en"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return base
+
+
+def _clear_existing_tsv(details_dir: Path) -> None:
+    for f in details_dir.glob("*.tsv"):
+        f.unlink(missing_ok=True)
+
+
 def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as f:
@@ -160,6 +174,7 @@ def run_termalign_api(
     high_conf_output, details_dir = _resolve_output_dirs(resolved_output, output_dir)
     high_conf_output.parent.mkdir(parents=True, exist_ok=True)
     details_dir.mkdir(parents=True, exist_ok=True)
+    _clear_existing_tsv(details_dir)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
@@ -205,22 +220,23 @@ def run_termalign_api(
     all_rows: list[dict[str, Any]] = []
     all_high_rows: list[dict[str, Any]] = []
     for source_file, file_rows in per_file.items():
+        source_base = _canonical_base(source_file)
         file_rows.sort(key=lambda x: float(x["similarity"]), reverse=True)
         if top_k_pairs > 0:
             file_rows = file_rows[:top_k_pairs]
-        _write_tsv(details_dir / f"{source_file}_alignments.tsv", file_rows)
+        _write_tsv(details_dir / f"{source_base}_alignments.tsv", file_rows)
 
         high_rows = [r for r in file_rows if float(r["similarity"]) >= min_pair_confidence]
         if high_rows:
-            _write_tsv(details_dir / f"{source_file}_alignments_high_conf.tsv", high_rows)
+            _write_tsv(details_dir / f"{source_base}_alignments_high_conf.tsv", high_rows)
             all_high_rows.extend(high_rows)
 
         _write_tsv(
-            details_dir / f"{source_file}_terms.zh.tsv",
+            details_dir / f"{source_base}_terms.zh.tsv",
             [{"zh_term": t, **{k: "" for k in TSV_FIELDS if k != "zh_term"}} for t in sorted({r["zh_term"] for r in file_rows if r.get("zh_term")})],
         )
         _write_tsv(
-            details_dir / f"{source_file}_terms.en.tsv",
+            details_dir / f"{source_base}_terms.en.tsv",
             [{"en_term": t, **{k: "" for k in TSV_FIELDS if k != "en_term"}} for t in sorted({r["en_term"] for r in file_rows if r.get("en_term")})],
         )
 

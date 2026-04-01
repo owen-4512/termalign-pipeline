@@ -150,6 +150,20 @@ def _resolve_default_output_file(
     return task3_root / f"output_{suffix}" / "high_confidence" / "all_alignments_high_conf.tsv"
 
 
+def _canonical_base(name: str) -> str:
+    base = name
+    for suffix in ("_alignments_high_conf", "_alignments", "_high_conf", "_terms.zh", "_terms.en", "_terms_zh", "_terms_en"):
+        if base.endswith(suffix):
+            base = base[: -len(suffix)]
+            break
+    return base
+
+
+def _clear_existing_tsv(details_dir: Path) -> None:
+    for f in details_dir.glob("*.tsv"):
+        f.unlink(missing_ok=True)
+
+
 def _organize_alignment_outputs(source_dir: Path, details_dir: Path, min_pair_confidence: float) -> tuple[Path | None, Path | None]:
     import pandas as pd
 
@@ -180,7 +194,13 @@ def _organize_alignment_outputs(source_dir: Path, details_dir: Path, min_pair_co
         else:
             df["similarity"] = 0.0
 
-        base = f.stem
+        # Only process alignment-like tables to avoid recursive term/high-conf derivations.
+        if "zh_term" not in df.columns or "en_term" not in df.columns:
+            continue
+        if f.stem.endswith(("_high_conf", "_terms.zh", "_terms.en", "_terms_zh", "_terms_en")):
+            continue
+
+        base = _canonical_base(f.stem)
         out_all = details_dir / f"{base}_alignments.tsv"
         out_high = details_dir / f"{base}_alignments_high_conf.tsv"
 
@@ -265,6 +285,7 @@ def run_termalign(
         prepared = _prepare_termalign_input(input_data, Path(tmp))
 
         details_dir.mkdir(parents=True, exist_ok=True)
+        _clear_existing_tsv(details_dir)
         high_conf_output.parent.mkdir(parents=True, exist_ok=True)
 
         raw_details_dir = Path(tmp) / "raw_alignment_details"
