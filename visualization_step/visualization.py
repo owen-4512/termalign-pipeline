@@ -23,7 +23,6 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 
 
 @dataclass
@@ -77,6 +76,11 @@ def discover_evaluation_files(results_dir: Path) -> list[Path]:
 
 
 def _render(points: list[EvalPoint], output_figure: Path, title: str) -> None:
+    try:
+        import matplotlib.pyplot as plt
+    except ModuleNotFoundError as exc:
+        raise ModuleNotFoundError("matplotlib is required for visualization. Install deps from visualization_step/requirements.txt") from exc
+
     output_figure.parent.mkdir(parents=True, exist_ok=True)
 
     fig, (ax_plot, ax_table) = plt.subplots(
