@@ -472,11 +472,19 @@ def run_full_over_all_inputs(args: argparse.Namespace) -> tuple[list[str], list[
         run_args = deepcopy(args)
         run_args.inputs_dir = str(inputs_dir)
         run_args.bertalign_batch_data_dir = str(inputs_dir)
+        # Generate one aggregated visualization after all inputs finish.
+        run_args.visualization = False
         try:
             results.append(run_full(run_args))
         except Exception as e:
             failures.append((inputs_dir.name, str(e)))
             logging.exception("Pipeline failed for %s", inputs_dir.name)
+
+    if args.visualization and results:
+        vis_args = apply_data_defaults(deepcopy(args))
+        if not vis_args.visualization_evaluation_files:
+            vis_args.visualization_evaluation_files = results
+        _run_visualization(vis_args)
     return results, failures
 
 
