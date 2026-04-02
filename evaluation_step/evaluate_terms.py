@@ -50,7 +50,9 @@ def evaluate_terms(
     report_level: str = "batch",
     metrics: list[str] | None = None,
     alpha: float = 0.2,
+    include_debug: bool = True,
     debug_sublogs_dir: str | None = None,
+    strict_input_format: bool = False,
 ) -> str:
     termalign_input = Path(termalign_output)
     dict_json = Path(dictionary_path)
@@ -62,11 +64,15 @@ def evaluate_terms(
         tmpdir = Path(tmp)
         if termalign_input.suffix.lower() == ".tsv":
             termalign_tsv = termalign_input
+        elif strict_input_format:
+            raise ValueError("termalign_output must be .tsv when --strict-input-format is enabled")
         else:
             termalign_tsv = _jsonl_to_termalign_tsv(termalign_input, tmpdir / "termalign.tsv")
 
         if dict_json.suffix.lower() == ".jsonl":
             gold_jsonl = dict_json
+        elif strict_input_format:
+            raise ValueError("dictionary_path must be .jsonl when --strict-input-format is enabled")
         else:
             gold_jsonl = _dict_json_to_gold_jsonl(dict_json, tmpdir / "gold.jsonl")
 
@@ -79,7 +85,7 @@ def evaluate_terms(
             target_txt=Path(target_txt) if target_txt else None,
             target_dir=Path(target_dir) if target_dir else None,
             report_level=report_level,
-            include_debug=True,
+            include_debug=include_debug,
             include_cross_document_consistency=True,
         )
 
@@ -94,21 +100,21 @@ def evaluate_terms(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Keep only per-metric sublogs, no metrics.json output.
-    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (out_path.parent / "metrics_sublogs")
-    sublogs_dir.mkdir(parents=True, exist_ok=True)
-    debug_obj = result.get("debug", {})
-    if isinstance(debug_obj, dict):
-        if "accuracy" in debug_obj:
-            (sublogs_dir / "accuracy.json").write_text(
-                json.dumps(debug_obj["accuracy"], ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
-        if "consistency" in debug_obj:
-            (sublogs_dir / "consistency.json").write_text(
-                json.dumps(debug_obj["consistency"], ensure_ascii=False, indent=2),
-                encoding="utf-8",
-            )
+    if include_debug:
+        sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (out_path.parent / "metrics_sublogs")
+        sublogs_dir.mkdir(parents=True, exist_ok=True)
+        debug_obj = result.get("debug", {})
+        if isinstance(debug_obj, dict):
+            if "accuracy" in debug_obj:
+                (sublogs_dir / "accuracy.json").write_text(
+                    json.dumps(debug_obj["accuracy"], ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+            if "consistency" in debug_obj:
+                (sublogs_dir / "consistency.json").write_text(
+                    json.dumps(debug_obj["consistency"], ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
 
     return str(out_path)
 
@@ -121,10 +127,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=["simple", "batch"], default="batch")
     parser.add_argument("--target-txt", default=None)
     parser.add_argument("--target-dir", default=None)
-    parser.add_argument("--report-level", choices=["document", "batch", "both"], default="batch")
+    parser.add_argument("--report-level", choices=["batch"], default="batch")
     parser.add_argument("--metrics", nargs="+", default=["all"])
     parser.add_argument("--alpha", type=float, default=0.2)
+    parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--debug-sublogs-dir", default=None)
+    parser.add_argument("--strict-input-format", action="store_true")
     return parser
 
 
@@ -140,7 +148,9 @@ def main() -> None:
         report_level=args.report_level,
         metrics=args.metrics,
         alpha=args.alpha,
+        include_debug=args.debug,
         debug_sublogs_dir=args.debug_sublogs_dir,
+        strict_input_format=args.strict_input_format,
     )
 
 

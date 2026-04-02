@@ -20,9 +20,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mode", choices=["simple", "batch"], default="batch")
     parser.add_argument("--target-txt", type=Path, default=None)
     parser.add_argument("--target-dir", type=Path, default=None)
-    parser.add_argument("--report-level", choices=["document", "batch", "both"], default="batch")
+    parser.add_argument("--report-level", choices=["batch"], default="batch")
     parser.add_argument("--metrics", nargs="+", default=["all"])
     parser.add_argument("--alpha", type=float, default=0.2)
+    parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--debug-sublogs-dir", type=Path, default=Path("evaluation_step/data/outputs/metrics_sublogs"))
     parser.add_argument("--output-json", type=Path, default=None)
     return parser
@@ -41,7 +42,7 @@ def main() -> None:
         target_txt=args.target_txt,
         target_dir=args.target_dir,
         report_level=args.report_level,
-        include_debug=True,
+        include_debug=args.debug,
         include_cross_document_consistency=True,
     )
 
@@ -53,15 +54,15 @@ def main() -> None:
     }
     print(json.dumps(summary, ensure_ascii=False))
 
-    # Keep only per-metric sublogs, no metrics.json output.
-    sublogs = args.debug_sublogs_dir
-    sublogs.mkdir(parents=True, exist_ok=True)
-    debug_info = result.get("debug", {})
-    if isinstance(debug_info, dict):
-        if "accuracy" in debug_info:
-            (sublogs / "accuracy.json").write_text(json.dumps(debug_info["accuracy"], ensure_ascii=False, indent=2), encoding="utf-8")
-        if "consistency" in debug_info:
-            (sublogs / "consistency.json").write_text(json.dumps(debug_info["consistency"], ensure_ascii=False, indent=2), encoding="utf-8")
+    if args.debug:
+        sublogs = args.debug_sublogs_dir
+        sublogs.mkdir(parents=True, exist_ok=True)
+        debug_info = result.get("debug", {})
+        if isinstance(debug_info, dict):
+            if "accuracy" in debug_info:
+                (sublogs / "accuracy.json").write_text(json.dumps(debug_info["accuracy"], ensure_ascii=False, indent=2), encoding="utf-8")
+            if "consistency" in debug_info:
+                (sublogs / "consistency.json").write_text(json.dumps(debug_info["consistency"], ensure_ascii=False, indent=2), encoding="utf-8")
 
     if args.output_json:
         args.output_json.parent.mkdir(parents=True, exist_ok=True)
