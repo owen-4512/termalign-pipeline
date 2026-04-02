@@ -14,8 +14,16 @@ import venv
 from copy import deepcopy
 
 HERE = Path(__file__).resolve()
-# Minimal root fix: support runner at repo root or under a nested `pipeline/` folder.
-PROJECT_ROOT = HERE.parent if (HERE.parent / "bertalign_step").exists() else HERE.parents[1]
+
+
+def _detect_project_root(start: Path) -> Path:
+    for candidate in [start.parent, *start.parents]:
+        if (candidate / "bertalign_step").exists() and (candidate / "termalign_step").exists():
+            return candidate
+    return start.parent
+
+
+PROJECT_ROOT = _detect_project_root(HERE)
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 VENV_ROOT = PROJECT_ROOT / ".venvs"
@@ -32,18 +40,37 @@ def _venv_python(venv_dir: Path) -> Path:
     return venv_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
+def _requirements_signature(requirements_file: Path) -> str:
+    if not requirements_file.exists():
+        return ""
+    stat = requirements_file.stat()
+    return f"{stat.st_mtime_ns}:{stat.st_size}"
+
+
+def _sync_step_requirements(py: Path, venv_dir: Path, requirements_file: Path) -> None:
+    if not requirements_file.exists():
+        return
+    sig = _requirements_signature(requirements_file)
+    stamp = venv_dir / ".requirements.sig"
+    old = stamp.read_text(encoding="utf-8").strip() if stamp.exists() else ""
+    if old == sig:
+        return
+    subprocess.run([str(py), "-m", "pip", "install", "-r", str(requirements_file)], check=True)
+    stamp.write_text(sig, encoding="utf-8")
+
+
 def ensure_step_venv(step_name: str, requirements_file: Path) -> Path:
     venv_dir = VENV_ROOT / step_name
     py = _venv_python(venv_dir)
     if py.exists():
+        _sync_step_requirements(py, venv_dir, requirements_file)
         return py
 
     logging.info("[venv] creating %s", venv_dir)
     venv.create(venv_dir, with_pip=True)
     py = _venv_python(venv_dir)
     subprocess.run([str(py), "-m", "pip", "install", "--upgrade", "pip"], check=True)
-    if requirements_file.exists():
-        subprocess.run([str(py), "-m", "pip", "install", "-r", str(requirements_file)], check=True)
+    _sync_step_requirements(py, venv_dir, requirements_file)
     return py
 
 
@@ -89,6 +116,16 @@ def resolve_optional_paths(data_dir: str) -> dict[str, str]:
     }
 
 
+def resolve_visualization_defaults(data_dir: str) -> dict[str, str]:
+    root = Path(data_dir)
+    return {
+        "visualization_results_dir": str(root / "results"),
+        "visualization_output_figure": str(root / "results" / "weighted_consistency_vs_accuracy.png"),
+        "visualization_output_table_csv": str(root / "results" / "weighted_scores.csv"),
+        "visualization_title": "Evaluation: Weighted Consistency vs Weighted Accuracy",
+    }
+
+
 def ensure_parent_dirs(*paths: str) -> None:
     for p in paths:
         Path(p).parent.mkdir(parents=True, exist_ok=True)
@@ -126,6 +163,9 @@ def apply_data_defaults(args: argparse.Namespace) -> argparse.Namespace:
 
     for key, value in resolve_optional_paths(args.data_dir).items():
         if getattr(args, key, None) is None and Path(value).exists():
+            setattr(args, key, value)
+    for key, value in resolve_visualization_defaults(args.data_dir).items():
+        if getattr(args, key, None) is None:
             setattr(args, key, value)
 
     batch_input_dir = getattr(args, "bertalign_batch_data_dir", None) or getattr(args, "inputs_dir", None)
@@ -202,6 +242,15 @@ def add_eval_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--eval-debug-sublogs-dir", default=None)
 
 
+def add_visualization_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--visualization", action=argparse.BooleanOptionalAction, default=True)
+    p.add_argument("--visualization-evaluation-files", nargs="*", default=None)
+    p.add_argument("--visualization-results-dir", default=None)
+    p.add_argument("--visualization-output-figure", default=None)
+    p.add_argument("--visualization-output-table-csv", default=None)
+    p.add_argument("--visualization-title", default=None)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified pipeline runner")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -211,6 +260,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_bertalign_args(full)
     add_termalign_args(full)
     add_eval_args(full)
+    add_visualization_args(full)
     full.add_argument("--isolate-venv", action=argparse.BooleanOptionalAction, default=True)
 
     ba = sub.add_parser("bertalign")
@@ -232,6 +282,13 @@ def build_parser() -> argparse.ArgumentParser:
     ev.add_argument("--dictionary-path", default=None)
     ev.add_argument("--evaluation-output", default=None)
     add_eval_args(ev)
+    add_visualization_args(ev)
+    ev.add_argument("--isolate-venv", action=argparse.BooleanOptionalAction, default=True)
+
+    vz = sub.add_parser("visualization")
+    add_data_dir_arg(vz)
+    add_visualization_args(vz)
+    vz.add_argument("--isolate-venv", action=argparse.BooleanOptionalAction, default=True)
     return parser
 
 
@@ -249,6 +306,42 @@ def _eval_cli_args(args: argparse.Namespace) -> list[str]:
         *( ["--no-debug"] if not args.eval_debug else []),
         *( ["--debug-sublogs-dir", args.eval_debug_sublogs_dir] if args.eval_debug_sublogs_dir else []),
     ]
+
+
+def _effective_visualization_files(args: argparse.Namespace) -> list[str] | None:
+    if args.visualization_evaluation_files:
+        return args.visualization_evaluation_files
+    candidate = getattr(args, "evaluation_output", None)
+    if candidate and Path(candidate).exists():
+        return [candidate]
+    return None
+
+
+def _visualization_cli_args(args: argparse.Namespace) -> list[str]:
+    evaluation_files = _effective_visualization_files(args)
+    return [
+        *( ["--evaluation-files", *evaluation_files] if evaluation_files else []),
+        "--results-dir", args.visualization_results_dir,
+        "--output-figure", args.visualization_output_figure,
+        "--output-table-csv", args.visualization_output_table_csv,
+        "--title", args.visualization_title,
+    ]
+
+
+def _run_visualization(args: argparse.Namespace) -> str:
+    if args.isolate_venv:
+        run_module_in_step_venv("visualization_step", "visualization_step.visualization", _visualization_cli_args(args))
+        return args.visualization_output_figure
+
+    from visualization_step.visualization import visualize_evaluation_results
+
+    return visualize_evaluation_results(
+        evaluation_files=_effective_visualization_files(args),
+        results_dir=args.visualization_results_dir,
+        output_figure=args.visualization_output_figure,
+        output_table_csv=args.visualization_output_table_csv,
+        title=args.visualization_title,
+    )
 
 
 def run_full(args: argparse.Namespace) -> str:
@@ -306,6 +399,8 @@ def run_full(args: argparse.Namespace) -> str:
         ])
 
         run_module_in_step_venv("evaluation_step", "evaluation_step.evaluate_terms", _eval_cli_args(args))
+        if args.visualization:
+            _run_visualization(args)
         return args.evaluation_output
 
     from bertalign_step.run_bertalign import run_bertalign
@@ -364,7 +459,7 @@ def run_full(args: argparse.Namespace) -> str:
         skip_bert=args.skip_bert,
     )
 
-    return evaluate_terms(
+    out = evaluate_terms(
         termalign_output=ta_out,
         dictionary_path=args.dictionary_path,
         output_file=args.evaluation_output,
@@ -377,6 +472,9 @@ def run_full(args: argparse.Namespace) -> str:
         include_debug=args.eval_debug,
         debug_sublogs_dir=args.eval_debug_sublogs_dir,
     )
+    if args.visualization:
+        _run_visualization(args)
+    return out
 
 
 def run_full_over_all_inputs(args: argparse.Namespace) -> tuple[list[str], list[tuple[str, str]]]:
@@ -421,6 +519,10 @@ def main() -> None:
         return
 
     args = apply_data_defaults(args)
+
+    if args.command == "visualization":
+        print(_run_visualization(args))
+        return
 
     if args.command == "bertalign":
         from bertalign_step.run_bertalign import run_bertalign
@@ -484,6 +586,8 @@ def main() -> None:
             include_debug=args.eval_debug,
             debug_sublogs_dir=args.eval_debug_sublogs_dir,
         )
+        if args.visualization:
+            _run_visualization(args)
         print(out)
         return
 
