@@ -12,6 +12,7 @@
 6. Further optimized `pipeline.py` hot loops with lighter dict-span keys (`(start,end)`), `defaultdict` grouping, and fast-path skip when no dictionary spans exist.
 7. Optimized `run_termalign.py` HF model path with cached runtime-version checks, concurrent model snapshot downloads, and streaming JSONL→TSV conversion.
 8. Optimized `run_termalign_api.py` with concurrent request dispatch (`--workers`), shared session reuse, and lower-overhead term-row materialization.
+9. Optimized `runner_pipeline_api.py` by reusing `runner.build_parser()` and forcing API-mode defaults instead of duplicating CLI definitions.
 
 ## Suggested next optimizations
 - Add async/concurrent API requests for API mode.
