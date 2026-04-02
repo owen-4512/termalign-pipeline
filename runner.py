@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -41,36 +40,18 @@ def _venv_python(venv_dir: Path) -> Path:
     return venv_dir / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
-def _requirements_signature(requirements_file: Path) -> str:
-    if not requirements_file.exists():
-        return ""
-    return hashlib.sha256(requirements_file.read_bytes()).hexdigest()
-
-
-def _sync_step_requirements(py: Path, venv_dir: Path, requirements_file: Path) -> None:
-    if not requirements_file.exists():
-        return
-    sig = _requirements_signature(requirements_file)
-    stamp = venv_dir / ".requirements.sig"
-    old = stamp.read_text(encoding="utf-8").strip() if stamp.exists() else ""
-    if old == sig:
-        return
-    subprocess.run([str(py), "-m", "pip", "install", "-r", str(requirements_file)], check=True)
-    stamp.write_text(sig, encoding="utf-8")
-
-
 def ensure_step_venv(step_name: str, requirements_file: Path) -> Path:
     venv_dir = VENV_ROOT / step_name
     py = _venv_python(venv_dir)
     if py.exists():
-        _sync_step_requirements(py, venv_dir, requirements_file)
         return py
 
     logging.info("[venv] creating %s", venv_dir)
     venv.create(venv_dir, with_pip=True)
     py = _venv_python(venv_dir)
     subprocess.run([str(py), "-m", "pip", "install", "--upgrade", "pip"], check=True)
-    _sync_step_requirements(py, venv_dir, requirements_file)
+    if requirements_file.exists():
+        subprocess.run([str(py), "-m", "pip", "install", "-r", str(requirements_file)], check=True)
     return py
 
 
