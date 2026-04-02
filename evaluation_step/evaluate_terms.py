@@ -86,7 +86,7 @@ def evaluate_terms(
 
     batch_score = result.get("batch_score", {}) if isinstance(result.get("batch_score", {}), dict) else {}
     summary = {
-        "accuracy": batch_score.get("accuracy", batch_score.get("precision")),
+        "accuracy": batch_score.get("accuracy"),
         "consistency": batch_score.get("consistency"),
         "final_score": batch_score.get("final_score"),
     }

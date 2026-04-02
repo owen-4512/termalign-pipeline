@@ -8,7 +8,7 @@ Features:
 Expected input JSON schema (subset):
 {
   "batch_score": {
-    "precision": 0.85,
+    "accuracy": 0.85,
     "consistency": 0.72,
     "final_score": 0.83
   }
@@ -58,7 +58,7 @@ def parse_evaluation_result(path: Path) -> EvalPoint:
     payload = json.loads(path.read_text(encoding="utf-8"))
     batch = payload.get("batch_score", {}) if isinstance(payload, dict) else {}
 
-    weighted_accuracy = _to_float(batch.get("precision", batch.get("accuracy", batch.get("weighted_accuracy"))))
+    weighted_accuracy = _to_float(batch.get("accuracy", batch.get("weighted_accuracy")))
     weighted_consistency = _to_float(batch.get("consistency", batch.get("weighted_consistency")))
     final_score = _to_float(batch.get("final_score"))
 
