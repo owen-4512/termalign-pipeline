@@ -9,6 +9,7 @@
    - streamlined `zip(...)` sentence-pair alignment loop.
 4. Added `termalign_pipeline/io_utils.py` with lean TSV/dictionary IO utilities used by pipeline.
 5. Replaced pandas-heavy IO in `io_utils.py` with csv streaming readers/writers to reduce memory overhead on large batches.
+6. Further optimized `pipeline.py` hot loops with lighter dict-span keys (`(start,end)`), `defaultdict` grouping, and fast-path skip when no dictionary spans exist.
 
 ## Suggested next optimizations
 - Add async/concurrent API requests for API mode.

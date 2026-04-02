@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from pathlib import Path
 from typing import List, Sequence
 import re
@@ -14,32 +15,28 @@ from .io_utils import SentencePair, read_dictionary, read_sentence_pairs, write_
 NEWLINE_RE = re.compile(r"(?:\\n|\n|\r)")
 
 
-def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, int, str]]:
-    return {(occ.start, occ.end, occ.sentence) for occ in occurrences}
+def _dedupe_dict_spans(occurrences: Sequence[TermOccurrence]) -> set[tuple[int, int]]:
+    # sentence is identical in one extraction pass; keep only offsets to reduce tuple size.
+    return {(occ.start, occ.end) for occ in occurrences}
 
 
 def _normalize_en_sentence(sentence: str) -> str:
-    sentence = NEWLINE_RE.sub(" ", sentence)
-    return " ".join(sentence.split())
+    return " ".join(NEWLINE_RE.sub(" ", sentence).split())
 
 
 def _keep_longest_non_overlapping(terms: List[TermOccurrence]) -> List[TermOccurrence]:
-    by_sentence: dict[str, List[TermOccurrence]] = {}
+    by_sentence: dict[str, List[TermOccurrence]] = defaultdict(list)
     for term in terms:
-        by_sentence.setdefault(term.sentence, []).append(term)
+        by_sentence[term.sentence].append(term)
 
     results: List[TermOccurrence] = []
     for sentence_terms in by_sentence.values():
         sorted_terms = sorted(sentence_terms, key=lambda item: (-(item.end - item.start), item.start))
         kept: List[TermOccurrence] = []
         for candidate in sorted_terms:
-            has_overlap = False
-            for existing in kept:
-                if candidate.start < existing.end and candidate.end > existing.start:
-                    has_overlap = True
-                    break
-            if not has_overlap:
-                kept.append(candidate)
+            if any(candidate.start < existing.end and candidate.end > existing.start for existing in kept):
+                continue
+            kept.append(candidate)
         kept.sort(key=lambda item: item.start)
         results.extend(kept)
     return results
@@ -81,21 +78,26 @@ def extract_terms(
     all_occurrences: List[TermOccurrence] = []
     for pair in tqdm(pairs, desc=f"extract-{language_label}"):
         sentence = pair.zh if language_label == "zh" else pair.en
-        dict_occurrences: List[TermOccurrence] = dict_extractor.extract(sentence) if dict_extractor else []
+        dict_occurrences = dict_extractor.extract(sentence) if dict_extractor else []
         if dict_occurrences:
             all_occurrences.extend(dict_occurrences)
 
-        if bert_extractor:
+        if not bert_extractor:
+            continue
+
+        if dict_occurrences:
             dict_spans = _dedupe_dict_spans(dict_occurrences)
             bert_occurrences = bert_extractor.extract(sentence)
-            all_occurrences.extend([occ for occ in bert_occurrences if (occ.start, occ.end, occ.sentence) not in dict_spans])
+            all_occurrences.extend([occ for occ in bert_occurrences if (occ.start, occ.end) not in dict_spans])
+        else:
+            all_occurrences.extend(bert_extractor.extract(sentence))
     return all_occurrences
 
 
 def _group_terms_by_sentence(terms: List[TermOccurrence]) -> dict[str, List[TermOccurrence]]:
-    grouped: dict[str, List[TermOccurrence]] = {}
+    grouped: dict[str, List[TermOccurrence]] = defaultdict(list)
     for term in terms:
-        grouped.setdefault(term.sentence, []).append(term)
+        grouped[term.sentence].append(term)
     return grouped
 
 
@@ -103,11 +105,9 @@ def _alignment_rows(alignments: List[AlignmentResult], converter_s2t: OpenCC, so
     convert_cache: dict[str, str] = {}
 
     def to_s2t(text: str) -> str:
-        if text in convert_cache:
-            return convert_cache[text]
-        converted = converter_s2t.convert(text)
-        convert_cache[text] = converted
-        return converted
+        if text not in convert_cache:
+            convert_cache[text] = converter_s2t.convert(text)
+        return convert_cache[text]
 
     return [
         {
@@ -160,7 +160,16 @@ def _process_single_input(
         }
         for t in zh_terms
     ]
-    en_rows = [{"source_file": source_file, "term": t.term, "source": t.source, "confidence": t.confidence, "sentence": t.sentence} for t in en_terms]
+    en_rows = [
+        {
+            "source_file": source_file,
+            "term": t.term,
+            "source": t.source,
+            "confidence": t.confidence,
+            "sentence": t.sentence,
+        }
+        for t in en_terms
+    ]
 
     alignments: List[AlignmentResult] = []
     for zh_pair, en_pair in zip(normalized_pairs, en_pairs):
