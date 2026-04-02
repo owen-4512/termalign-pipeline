@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
-"""Pipeline runner with optional visualization step.
-
-This lightweight runner demonstrates how visualization can be chained
-immediately after evaluation, and can also run visualization standalone.
-"""
+"""Pipeline runner with optional visualization step and evaluation aggregation."""
 
 from __future__ import annotations
 
 import argparse
 import logging
+import shutil
 from pathlib import Path
 
 from visualization_step.visualization import visualize_evaluation_results
@@ -46,6 +43,14 @@ def add_visualization_args(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def add_aggregation_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--aggregate-eval-dir",
+        default="data/results/all_evaluation_results",
+        help="Directory used to gather all inputs_xxx evaluation_result.json files.",
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Pipeline runner")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -57,13 +62,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Evaluation output path produced by previous step.",
     )
     add_visualization_args(full)
+    add_aggregation_args(full)
 
-    ev = sub.add_parser("evaluation", help="Run evaluation-only (stub) then optional visualization")
+    ev = sub.add_parser("evaluation", help="Run evaluation-only then optional visualization")
     ev.add_argument(
         "--evaluation-output",
         default="data/results/evaluation_result.json",
     )
     add_visualization_args(ev)
+    add_aggregation_args(ev)
 
     vz = sub.add_parser("visualization", help="Run visualization standalone")
     vz.add_argument("--results-dir", default="data/results")
@@ -93,6 +100,34 @@ def _run_visualization_from_args(args: argparse.Namespace) -> str:
     )
 
 
+def _model_suffix_from_eval(eval_path: Path) -> str:
+    for part in reversed(eval_path.parts):
+        if part.startswith("output_") or part.startswith("outputs_"):
+            return part.split("_", 1)[1] or "default"
+    parent = eval_path.parent.name
+    if "_" in parent:
+        return parent.split("_")[-1] or "default"
+    return parent or "default"
+
+
+def aggregate_evaluation_results(results_root: str = "data/results", aggregate_dir: str = "data/results/all_evaluation_results") -> Path:
+    root = Path(results_root)
+    out_dir = Path(aggregate_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    seen = 0
+    for eval_json in sorted(root.glob("**/evaluation_result.json")):
+        if out_dir in eval_json.parents:
+            continue
+        suffix = _model_suffix_from_eval(eval_json)
+        target = out_dir / f"evaluation_result_{suffix}.json"
+        shutil.copy2(eval_json, target)
+        seen += 1
+
+    logging.info("Aggregated %d evaluation files into %s", seen, out_dir)
+    return out_dir
+
+
 def main() -> None:
     args = build_parser().parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -108,11 +143,13 @@ def main() -> None:
         print(out)
         return
 
-    # In this simplified environment, evaluation/full execution is assumed done elsewhere.
-    # We only wire the optional visualization hook right after evaluation.
     eval_path = Path(args.evaluation_output)
     if not eval_path.exists():
         logging.warning("Evaluation output does not exist yet: %s", eval_path)
+
+    # Always create aggregate folder under data/results for all inputs_xxx evaluation results.
+    aggregate_dir = aggregate_evaluation_results(results_root="data/results", aggregate_dir=args.aggregate_eval_dir)
+    logging.info("Aggregate evaluation folder ready: %s", aggregate_dir)
 
     if args.visualization:
         out = _run_visualization_from_args(args)
