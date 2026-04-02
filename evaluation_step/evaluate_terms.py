@@ -50,7 +50,6 @@ def evaluate_terms(
     report_level: str = "batch",
     metrics: list[str] | None = None,
     alpha: float = 0.2,
-    debug_log: str | None = None,
     debug_sublogs_dir: str | None = None,
 ) -> str:
     termalign_input = Path(termalign_output)
@@ -95,11 +94,9 @@ def evaluate_terms(
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    log_path = Path(debug_log) if debug_log else (out_path.parent / "metrics.json")
-    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (log_path.parent / "metrics_sublogs")
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    # Keep only per-metric sublogs, no metrics.json output.
+    sublogs_dir = Path(debug_sublogs_dir) if debug_sublogs_dir else (out_path.parent / "metrics_sublogs")
     sublogs_dir.mkdir(parents=True, exist_ok=True)
-    log_path.write_text(json.dumps(result.get("debug", {}), ensure_ascii=False, indent=2), encoding="utf-8")
     debug_obj = result.get("debug", {})
     if isinstance(debug_obj, dict):
         if "accuracy" in debug_obj:
@@ -127,7 +124,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report-level", choices=["document", "batch", "both"], default="batch")
     parser.add_argument("--metrics", nargs="+", default=["all"])
     parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--debug-log", default=None)
     parser.add_argument("--debug-sublogs-dir", default=None)
     return parser
 
@@ -144,7 +140,6 @@ def main() -> None:
         report_level=args.report_level,
         metrics=args.metrics,
         alpha=args.alpha,
-        debug_log=args.debug_log,
         debug_sublogs_dir=args.debug_sublogs_dir,
     )
 

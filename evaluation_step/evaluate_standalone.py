@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone evaluation CLI with summary + debug logs."""
+"""Standalone evaluation CLI with summary + per-metric debug sublogs."""
 
 from __future__ import annotations
 
@@ -23,8 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--report-level", choices=["document", "batch", "both"], default="batch")
     parser.add_argument("--metrics", nargs="+", default=["all"])
     parser.add_argument("--alpha", type=float, default=0.2)
-    parser.add_argument("--debug-log", type=Path, default=Path("evaluation_step/data/outputs/metrics.json"))
-    parser.add_argument("--debug-sublogs-dir", type=Path, default=None)
+    parser.add_argument("--debug-sublogs-dir", type=Path, default=Path("evaluation_step/data/outputs/metrics_sublogs"))
     parser.add_argument("--output-json", type=Path, default=None)
     return parser
 
@@ -54,13 +53,10 @@ def main() -> None:
     }
     print(json.dumps(summary, ensure_ascii=False))
 
-    debug_log = args.debug_log
-    debug_log.parent.mkdir(parents=True, exist_ok=True)
-    debug_info = result.get("debug", {})
-    debug_log.write_text(json.dumps(debug_info, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    sublogs = args.debug_sublogs_dir if args.debug_sublogs_dir else debug_log.parent / "metrics_sublogs"
+    # Keep only per-metric sublogs, no metrics.json output.
+    sublogs = args.debug_sublogs_dir
     sublogs.mkdir(parents=True, exist_ok=True)
+    debug_info = result.get("debug", {})
     if isinstance(debug_info, dict):
         if "accuracy" in debug_info:
             (sublogs / "accuracy.json").write_text(json.dumps(debug_info["accuracy"], ensure_ascii=False, indent=2), encoding="utf-8")
