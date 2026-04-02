@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 from pathlib import Path
 from datetime import datetime
@@ -43,8 +44,7 @@ def _venv_python(venv_dir: Path) -> Path:
 def _requirements_signature(requirements_file: Path) -> str:
     if not requirements_file.exists():
         return ""
-    stat = requirements_file.stat()
-    return f"{stat.st_mtime_ns}:{stat.st_size}"
+    return hashlib.sha256(requirements_file.read_bytes()).hexdigest()
 
 
 def _sync_step_requirements(py: Path, venv_dir: Path, requirements_file: Path) -> None:
