@@ -13,15 +13,9 @@ import os
 import venv
 from copy import deepcopy
 
-def _detect_project_root() -> Path:
-    here = Path(__file__).resolve()
-    for candidate in [here.parent, *here.parents]:
-        if (candidate / "bertalign_step").exists() and (candidate / "termalign_step").exists():
-            return candidate
-    return here.parent
-
-
-PROJECT_ROOT = _detect_project_root()
+HERE = Path(__file__).resolve()
+# Minimal root fix: support runner at repo root or under a nested `pipeline/` folder.
+PROJECT_ROOT = HERE.parent if (HERE.parent / "bertalign_step").exists() else HERE.parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 VENV_ROOT = PROJECT_ROOT / ".venvs"
