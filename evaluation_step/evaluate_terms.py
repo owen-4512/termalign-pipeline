@@ -52,7 +52,6 @@ def evaluate_terms(
     alpha: float = 0.2,
     include_debug: bool = True,
     debug_sublogs_dir: str | None = None,
-    strict_input_format: bool = False,
 ) -> str:
     termalign_input = Path(termalign_output)
     dict_json = Path(dictionary_path)
@@ -64,15 +63,11 @@ def evaluate_terms(
         tmpdir = Path(tmp)
         if termalign_input.suffix.lower() == ".tsv":
             termalign_tsv = termalign_input
-        elif strict_input_format:
-            raise ValueError("termalign_output must be .tsv when --strict-input-format is enabled")
         else:
             termalign_tsv = _jsonl_to_termalign_tsv(termalign_input, tmpdir / "termalign.tsv")
 
         if dict_json.suffix.lower() == ".jsonl":
             gold_jsonl = dict_json
-        elif strict_input_format:
-            raise ValueError("dictionary_path must be .jsonl when --strict-input-format is enabled")
         else:
             gold_jsonl = _dict_json_to_gold_jsonl(dict_json, tmpdir / "gold.jsonl")
 
@@ -132,7 +127,6 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--alpha", type=float, default=0.2)
     parser.add_argument("--debug", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--debug-sublogs-dir", default=None)
-    parser.add_argument("--strict-input-format", action="store_true")
     return parser
 
 
@@ -150,7 +144,6 @@ def main() -> None:
         alpha=args.alpha,
         include_debug=args.debug,
         debug_sublogs_dir=args.debug_sublogs_dir,
-        strict_input_format=args.strict_input_format,
     )
 
 
