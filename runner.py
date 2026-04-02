@@ -13,7 +13,15 @@ import os
 import venv
 from copy import deepcopy
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+def _detect_project_root() -> Path:
+    here = Path(__file__).resolve()
+    for candidate in [here.parent, *here.parents]:
+        if (candidate / "bertalign_step").exists() and (candidate / "termalign_step").exists():
+            return candidate
+    return here.parent
+
+
+PROJECT_ROOT = _detect_project_root()
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 VENV_ROOT = PROJECT_ROOT / ".venvs"
@@ -56,7 +64,7 @@ def run_module_in_step_venv(step_name: str, module: str, args_list: list[str]) -
         text=True,
         encoding="utf-8",
         errors="replace",
-        env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+        env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONPATH": str(PROJECT_ROOT) + os.pathsep + os.environ.get("PYTHONPATH", "")},
     )
     if proc.stdout:
         logging.info("[%s stdout]\n%s", step_name, proc.stdout.strip())
