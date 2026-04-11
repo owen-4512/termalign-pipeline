@@ -149,6 +149,12 @@ def launch_context(p: Playwright, profile_dir: str, headless: bool, browser_pref
                 "user_data_dir": profile_dir,
                 "headless": headless,
                 "viewport": {"width": 1440, "height": 900},
+                "args": [
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-first-run",
+                    "--no-default-browser-check",
+                ],
+                "ignore_default_args": ["--enable-automation"],
             }
             if item in {"chrome", "msedge"}:
                 kwargs["channel"] = item
@@ -161,9 +167,29 @@ def launch_context(p: Playwright, profile_dir: str, headless: bool, browser_pref
     raise RuntimeError("浏览器启动失败：\n" + "\n".join(errors))
 
 
+def recover_auth_error(page: Page) -> None:
+    if "/api/auth/error" not in page.url:
+        return
+
+    print("检测到 /api/auth/error，正在尝试自动恢复到登录流程...", flush=True)
+    try:
+        page.context.clear_cookies()
+        page.goto("https://chatgpt.com/auth/logout", wait_until="domcontentloaded", timeout=30_000)
+    except Exception:
+        pass
+
+    try:
+        page.goto("https://chatgpt.com/", wait_until="domcontentloaded", timeout=45_000)
+    except Exception:
+        pass
+
+
 def ensure_ready(page: Page, start_timeout: int) -> None:
     deadline = time.time() + start_timeout
     while time.time() < deadline:
+        if "/api/auth/error" in page.url:
+            recover_auth_error(page)
+
         if first_visible(page, COMPOSER_SELECTORS):
             return
 
@@ -173,7 +199,7 @@ def ensure_ready(page: Page, start_timeout: int) -> None:
             title = "(无法读取标题)"
 
         print(
-            "页面暂未就绪，可能卡在 Cloudflare 验证。\n"
+            "页面暂未就绪，可能卡在 Cloudflare/登录状态异常。\n"
             f"当前 URL: {page.url}\n"
             f"当前标题: {title}\n"
             "请在浏览器里手动完成验证/登录，完成后回到终端按回车重试。",
@@ -204,6 +230,7 @@ def main() -> int:
 
         page = context.pages[0] if context.pages else context.new_page()
         page.goto(args.url, wait_until="domcontentloaded")
+        recover_auth_error(page)
 
         print("请先在浏览器中完成 Cloudflare/登录步骤。准备好后回终端按回车。", flush=True)
         input()
