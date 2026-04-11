@@ -9,8 +9,7 @@ import time
 from pathlib import Path
 from typing import Iterable
 
-from playwright.sync_api import Page, TimeoutError, sync_playwright
-
+from playwright.sync_api import BrowserContext, Page, Playwright, TimeoutError, sync_playwright
 
 COMPOSER_SELECTORS = [
     'textarea[data-testid="prompt-textarea"]',
@@ -35,24 +34,16 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="使用 ChatGPT 网页版批量提问并导出 TXT。")
     parser.add_argument("--input", required=True, help="问题文件：每行一个问题。")
     parser.add_argument("--output", default="chatgpt_web_replies.txt", help="输出文件路径。")
+    parser.add_argument("--url", default="https://chatgpt.com/", help="ChatGPT 网页地址。")
+    parser.add_argument("--wait-seconds", type=int, default=120, help="每个问题等待回复的最大秒数。")
+    parser.add_argument("--start-timeout", type=int, default=300, help="启动阶段等待页面可提问的最大秒数。")
+    parser.add_argument("--headless", action="store_true", help="无头模式运行（默认关闭）。")
+    parser.add_argument("--profile-dir", default=".playwright-profile", help="浏览器用户数据目录。")
     parser.add_argument(
-        "--url", default="https://chatgpt.com/", help="ChatGPT 网页地址（默认 https://chatgpt.com/）。"
-    )
-    parser.add_argument(
-        "--wait-seconds",
-        type=int,
-        default=120,
-        help="每个问题等待回复的最大秒数（默认 120）。",
-    )
-    parser.add_argument(
-        "--headless",
-        action="store_true",
-        help="无头模式运行（默认关闭，便于你手动登录）。",
-    )
-    parser.add_argument(
-        "--profile-dir",
-        default=".playwright-profile",
-        help="浏览器用户数据目录，用于复用登录态。",
+        "--browser",
+        choices=["auto", "chrome", "msedge", "chromium"],
+        default="auto",
+        help="浏览器类型：auto 会优先尝试 chrome/msedge，可减少 Cloudflare 卡住概率。",
     )
     return parser.parse_args()
 
@@ -119,7 +110,6 @@ def send_question_and_wait(page: Page, question: str, wait_seconds: int) -> str:
             else:
                 stable_rounds = 0
                 last_text = current
-
             if stable_rounds >= 3:
                 return current
         time.sleep(1)
@@ -132,11 +122,53 @@ def send_question_and_wait(page: Page, question: str, wait_seconds: int) -> str:
 def export_results(path: Path, results: list[tuple[str, str]]) -> None:
     blocks = []
     for i, (q, a) in enumerate(results, 1):
-        blocks.append(
-            f"===== 问题 {i} =====\n{q}\n\n"
-            f"----- 回复 {i} -----\n{a}\n"
-        )
+        blocks.append(f"===== 问题 {i} =====\n{q}\n\n" f"----- 回复 {i} -----\n{a}\n")
     path.write_text("\n".join(blocks), encoding="utf-8")
+
+
+def launch_context(p: Playwright, profile_dir: str, headless: bool, browser_pref: str) -> BrowserContext:
+    candidates = [browser_pref] if browser_pref != "auto" else ["chrome", "msedge", "chromium"]
+    errors: list[str] = []
+
+    for item in candidates:
+        try:
+            kwargs = {
+                "user_data_dir": profile_dir,
+                "headless": headless,
+                "viewport": {"width": 1440, "height": 900},
+            }
+            if item in {"chrome", "msedge"}:
+                kwargs["channel"] = item
+            context = p.chromium.launch_persistent_context(**kwargs)
+            print(f"已启动浏览器: {item}")
+            return context
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{item}: {type(exc).__name__}: {exc}")
+
+    raise RuntimeError("浏览器启动失败：\n" + "\n".join(errors))
+
+
+def ensure_ready(page: Page, start_timeout: int) -> None:
+    deadline = time.time() + start_timeout
+    while time.time() < deadline:
+        if first_visible(page, COMPOSER_SELECTORS):
+            return
+
+        try:
+            title = page.title()
+        except Exception:  # noqa: BLE001
+            title = "(无法读取标题)"
+
+        print(
+            "页面暂未就绪，可能卡在 Cloudflare 验证。\n"
+            f"当前 URL: {page.url}\n"
+            f"当前标题: {title}\n"
+            "请在浏览器里手动完成验证/登录，完成后回到终端按回车重试。",
+            flush=True,
+        )
+        input()
+
+    raise TimeoutError("启动阶段超时：长时间未检测到可输入提问的文本框。")
 
 
 def main() -> int:
@@ -151,16 +183,24 @@ def main() -> int:
     profile_dir.mkdir(parents=True, exist_ok=True)
 
     with sync_playwright() as p:
-        context = p.chromium.launch_persistent_context(
-            user_data_dir=str(profile_dir),
-            headless=args.headless,
-            viewport={"width": 1440, "height": 900},
-        )
-        page = context.new_page()
-        page.goto(args.url)
+        try:
+            context = launch_context(p, str(profile_dir), args.headless, args.browser)
+        except RuntimeError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            return 1
 
-        print("请在打开的浏览器中完成登录并进入聊天页，然后回到终端按回车继续...", flush=True)
+        page = context.pages[0] if context.pages else context.new_page()
+        page.goto(args.url, wait_until="domcontentloaded")
+
+        print("请先在浏览器中完成 Cloudflare/登录步骤。准备好后回终端按回车。", flush=True)
         input()
+
+        try:
+            ensure_ready(page, args.start_timeout)
+        except TimeoutError as exc:
+            print(f"错误：{exc}", file=sys.stderr)
+            context.close()
+            return 1
 
         results: list[tuple[str, str]] = []
         total = len(questions)

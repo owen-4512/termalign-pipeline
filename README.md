@@ -1,13 +1,9 @@
 # 用 ChatGPT 网页版批量提问并导出 TXT
 
-你提的需求是：**用 ChatGPT 网页 App**，把多个问题逐个贴进去，每个问题拿一个回复，最后导出 `txt`。
+你遇到的“页面一直转圈 / Cloudflare 验证不过去”问题，通常和浏览器内核有关。这个版本做了两点优化：
 
-这个脚本就是按这个流程做的：
-1. 打开 ChatGPT 网页（可复用登录态）
-2. 你手动登录一次
-3. 程序逐条发送问题
-4. 自动抓取每条问题对应的最新回复
-5. 导出到 txt
+- 默认 `--browser auto`：优先用本机 Chrome / Edge 渠道（比 Playwright 默认 Chromium 更不容易卡验证）
+- 增加“启动就绪检查”：如果没出现输入框，会反复提示你先手动完成验证/登录
 
 ---
 
@@ -18,9 +14,11 @@ pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
+> 如果你用 `--browser chrome` 或 `--browser msedge`，请确保本机已安装对应浏览器。
+
 ## 2) 准备问题文件
 
-创建 `questions.txt`（每行一个问题，空行会自动忽略）：
+创建 `questions.txt`（每行一个问题）：
 
 ```txt
 什么是向量数据库？
@@ -28,23 +26,34 @@ python -m playwright install chromium
 帮我列一个一周健身计划。
 ```
 
-## 3) 运行脚本
+## 3) 运行（推荐）
 
 ```bash
-python batch_chatgpt_export.py --input questions.txt --output replies.txt
+python batch_chatgpt_export.py --input questions.txt --output replies.txt --browser auto
 ```
 
-首次运行会打开浏览器：
-- 先在 ChatGPT 网页中登录
-- 进入可以正常聊天的页面
-- 回终端按一次回车，脚本开始逐条提问
+运行后流程：
+1. 浏览器打开 ChatGPT
+2. 你先手动通过 Cloudflare + 登录
+3. 回终端按回车
+4. 程序检测到输入框后，开始逐条提问并抓取回复
 
 ## 常用参数
 
+- `--browser auto|chrome|msedge|chromium`：浏览器选择（推荐 `auto`）
 - `--wait-seconds 180`：每题最多等待 180 秒
-- `--headless`：无头模式（一般不建议首次使用）
+- `--start-timeout 300`：启动阶段最多等待 300 秒
+- `--headless`：无头模式（不建议首次使用）
 - `--profile-dir .playwright-profile`：登录态目录
 - `--url https://chatgpt.com/`：网页地址
+
+## 如果还卡在验证页
+
+你可以尝试：
+- 明确指定 `--browser chrome` 或 `--browser msedge`
+- 关闭 VPN/代理后重试
+- 在打开的浏览器里手动刷新一次页面再按回车
+- 保持非无头模式（不要加 `--headless`）
 
 ## 输出格式
 
@@ -57,9 +66,3 @@ python batch_chatgpt_export.py --input questions.txt --output replies.txt
 ----- 回复 1 -----
 ...
 ```
-
-## 注意事项
-
-- ChatGPT 网页结构偶尔会改版，若按钮/输入框定位失败，可更新选择器。
-- 如果账号有验证码/风控，建议手动完成后再按回车开始批量发送。
-- 本脚本用于个人效率工具，请遵守相关平台条款。
