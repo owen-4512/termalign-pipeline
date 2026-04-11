@@ -92,6 +92,13 @@ python -m playwright install chromium
 
 ------------------------------------------------------------------------
 
+### 使用建议
+首次运行建议使用 --reset-profile
+多账号建议使用不同 --profile-dir
+长回答建议提高 --wait-seconds
+
+------------------------------------------------------------------------
+
 ## English
 
 ### 📌 Overview
@@ -126,3 +133,11 @@ python batch_chatgpt_export.py \
 pip install -r requirements.txt
 python -m playwright install chromium
 ```
+
+------------------------------------------------------------------------
+
+### 💡 Tips
+Use --reset-profile on first run
+Use different --profile-dir values for multiple accounts
+Increase --wait-seconds for long responses
+
