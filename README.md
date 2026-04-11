@@ -1,59 +1,50 @@
 # 用 ChatGPT 网页版批量提问并导出 TXT
 
-你遇到的“页面一直转圈 / Cloudflare 验证不过去”问题，通常和浏览器内核有关。这个版本做了两点优化：
+你现在这个情况（一直慢、可能选错了 Google 账号登录）最实用的方式是：**清空自动化浏览器的登录态后重登**。
 
-- 默认 `--browser auto`：优先用本机 Chrome / Edge 渠道（比 Playwright 默认 Chromium 更不容易卡验证）
-- 增加“启动就绪检查”：如果没出现输入框，会反复提示你先手动完成验证/登录
+## 快速重登（推荐命令）
+
+```bash
+python batch_chatgpt_export.py \
+  --input questions.txt \
+  --output replies.txt \
+  --browser chrome \
+  --reset-profile \
+  --url https://chatgpt.com/auth/login
+```
+
+这条命令会做 3 件事：
+1. `--reset-profile`：删除旧登录缓存（等于“退出当前账号”）
+2. `--browser chrome`：用你本机 Chrome（更接近手工登录）
+3. 直接打开登录页，重新选择账号登录
+
+> 如果你用 Edge，把 `--browser chrome` 改成 `--browser msedge`。
 
 ---
 
-## 1) 安装依赖
+## 安装依赖
 
 ```bash
 pip install -r requirements.txt
 python -m playwright install chromium
 ```
 
-> 如果你用 `--browser chrome` 或 `--browser msedge`，请确保本机已安装对应浏览器。
-
-## 2) 准备问题文件
-
-创建 `questions.txt`（每行一个问题）：
-
-```txt
-什么是向量数据库？
-如何用通俗的话解释 RAG？
-帮我列一个一周健身计划。
-```
-
-## 3) 运行（推荐）
-
-```bash
-python batch_chatgpt_export.py --input questions.txt --output replies.txt --browser auto
-```
-
-运行后流程：
-1. 浏览器打开 ChatGPT
-2. 你先手动通过 Cloudflare + 登录
-3. 回终端按回车
-4. 程序检测到输入框后，开始逐条提问并抓取回复
-
 ## 常用参数
 
-- `--browser auto|chrome|msedge|chromium`：浏览器选择（推荐 `auto`）
-- `--wait-seconds 180`：每题最多等待 180 秒
-- `--start-timeout 300`：启动阶段最多等待 300 秒
-- `--headless`：无头模式（不建议首次使用）
-- `--profile-dir .playwright-profile`：登录态目录
-- `--url https://chatgpt.com/`：网页地址
+- `--browser auto|chrome|msedge|chromium`：浏览器选择（推荐 `chrome` 或 `auto`）
+- `--reset-profile`：清空 `--profile-dir`，强制重新登录
+- `--profile-dir .playwright-profile`：登录态目录（可换新目录实现多账号）
+- `--url https://chatgpt.com/auth/login`：直接打开登录页
+- `--start-timeout 300`：启动阶段等待输入框出现的最大秒数
+- `--wait-seconds 180`：每题等待回复秒数
 
-## 如果还卡在验证页
+## 如果你不想删目录，也可以“换一个新登录目录”
 
-你可以尝试：
-- 明确指定 `--browser chrome` 或 `--browser msedge`
-- 关闭 VPN/代理后重试
-- 在打开的浏览器里手动刷新一次页面再按回车
-- 保持非无头模式（不要加 `--headless`）
+```bash
+python batch_chatgpt_export.py --input questions.txt --output replies.txt --profile-dir .profile-new --browser chrome
+```
+
+这样会启动一个“全新浏览器身份”，你可以重新选 Google 账号。
 
 ## 输出格式
 

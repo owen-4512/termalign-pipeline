@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -40,6 +41,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--headless", action="store_true", help="无头模式运行（默认关闭）。")
     parser.add_argument("--profile-dir", default=".playwright-profile", help="浏览器用户数据目录。")
     parser.add_argument(
+        "--reset-profile",
+        action="store_true",
+        help="启动前清空 profile-dir（用于退出当前登录态并重新登录）。",
+    )
+    parser.add_argument(
         "--browser",
         choices=["auto", "chrome", "msedge", "chromium"],
         default="auto",
@@ -55,6 +61,13 @@ def load_questions(path: Path) -> list[str]:
     if not questions:
         raise ValueError("输入文件为空，请至少保留一个非空问题。")
     return questions
+
+
+def prepare_profile_dir(profile_dir: Path, reset_profile: bool) -> None:
+    if reset_profile and profile_dir.exists():
+        shutil.rmtree(profile_dir)
+        print(f"已重置登录态目录: {profile_dir}")
+    profile_dir.mkdir(parents=True, exist_ok=True)
 
 
 def first_visible(page: Page, selectors: Iterable[str]):
@@ -180,7 +193,7 @@ def main() -> int:
         return 1
 
     profile_dir = Path(args.profile_dir)
-    profile_dir.mkdir(parents=True, exist_ok=True)
+    prepare_profile_dir(profile_dir, args.reset_profile)
 
     with sync_playwright() as p:
         try:
