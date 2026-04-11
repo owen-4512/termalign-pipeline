@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import sys
 import time
@@ -62,9 +63,22 @@ def parse_args() -> argparse.Namespace:
 def load_questions(path: Path) -> list[str]:
     if not path.exists():
         raise FileNotFoundError(f"找不到输入文件：{path}")
-    questions = [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    if not questions:
+
+    raw = path.read_text(encoding="utf-8").replace("\r\n", "\n")
+    stripped = raw.strip()
+    if not stripped:
         raise ValueError("输入文件为空，请至少保留一个非空问题。")
+
+    # 优先支持“复杂多行问题”：用 3 个及以上换行作为分隔符。
+    # 例如：问题A\n\n\n问题B
+    if re.search(r"(?:\n[ \t]*){3,}", stripped):
+        questions = [block.strip() for block in re.split(r"(?:\n[ \t]*){3,}", stripped) if block.strip()]
+    else:
+        # 兼容旧格式：每行一个问题。
+        questions = [line.strip() for line in stripped.split("\n") if line.strip()]
+
+    if not questions:
+        raise ValueError("输入文件没有解析出有效问题。")
     return questions
 
 
