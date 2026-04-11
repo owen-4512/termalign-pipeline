@@ -125,7 +125,33 @@ python batch_chatgpt_export.py \
 -   One question per line OR\
 -   Multi-line questions separated by blank lines
 
+
+#### ✅ Format A: One question per line
+
+``` txt
+What is AI?
+Explain Python basics.
+Give me a marketing plan.
+```
+
+#### ✅ Format B: Multi-line questions (Recommended)
+
+``` txt
+Write a short video content plan.
+Requirements:
+1) 30-day plan
+2) Weekly breakdown
+
+
+Translate the following text into Chinese and provide a glossary:
+...
+
+
+Compare Plan A and Plan B with pros/cons and recommendation.
+```
+
 ------------------------------------------------------------------------
+
 
 ### 📦 Installation
 
