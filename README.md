@@ -1,9 +1,12 @@
 # 用 ChatGPT 网页版批量提问并导出 TXT
 
-你现在遇到的是：登录后跳到 `https://chatgpt.com/api/auth/error`。
-这通常是登录态冲突或自动化浏览器会话异常导致。
+你现在这个情况（已登录，但终端仍提示“页面暂未就绪”）通常是因为：
+- ChatGPT 新版输入框不是 `textarea`，而是 `contenteditable div`
+- 页面虽然在首页，但输入框还没真正激活（需要先点左侧 `New chat`）
 
-## 推荐修复命令（先用这个）
+这个版本已经针对以上两点修复。
+
+## 推荐运行方式
 
 ```bash
 python batch_chatgpt_export.py \
@@ -14,18 +17,20 @@ python batch_chatgpt_export.py \
   --url https://chatgpt.com/
 ```
 
-为什么这样配：
-1. `--reset-profile`：删除旧会话，彻底重登
-2. `--browser chrome`：使用本机 Chrome（比默认自动化内核更稳定）
-3. 从主页进入而不是直接跳 `/auth/login`，减少回调错误概率
+## 使用步骤（关键）
+
+1. 浏览器打开后，先完成登录
+2. 点击左侧 **New chat / Neuer Chat**，确保底部输入框出现
+3. 回到终端按回车
+4. 脚本开始批量发送并导出结果
 
 ---
 
-## 这版脚本新增的保护
+## 这版修复点
 
-- 启动时若检测到 `/api/auth/error`，会自动尝试：清理 cookie -> 访问 logout -> 回到首页
-- 启动参数中减少自动化特征（降低被异常风控拦截概率）
-- 保留人工确认步骤：你可以先手工完成验证/登录，再回终端继续
+- 增加新版 ChatGPT 输入框选择器（`contenteditable` / `ProseMirror` 等）
+- 输入文本时支持 `fill` 失败自动回退到键盘输入
+- 终端提示中明确要求先打开新聊天并确认输入框可见
 
 ## 安装依赖
 
@@ -42,15 +47,3 @@ python -m playwright install chromium
 - `--url https://chatgpt.com/`：启动地址（推荐主页）
 - `--start-timeout 300`：启动阶段等待输入框出现的最大秒数
 - `--wait-seconds 180`：每题等待回复秒数
-
-## 如果还报 auth/error
-
-1. 先关掉脚本
-2. 改用全新 profile 目录再试：
-
-```bash
-python batch_chatgpt_export.py --input questions.txt --output replies.txt --browser chrome --profile-dir .profile-fresh
-```
-
-3. 在打开的浏览器里手动刷新，再登录
-4. 如仍失败，先在你平时手动使用的浏览器中确认 ChatGPT 登录正常，再回到脚本

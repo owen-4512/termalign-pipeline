@@ -10,17 +10,22 @@ import time
 from pathlib import Path
 from typing import Iterable
 
-from playwright.sync_api import BrowserContext, Page, Playwright, TimeoutError, sync_playwright
+from playwright.sync_api import BrowserContext, Locator, Page, Playwright, TimeoutError, sync_playwright
 
 COMPOSER_SELECTORS = [
     'textarea[data-testid="prompt-textarea"]',
     'textarea#prompt-textarea',
+    'div#prompt-textarea[contenteditable="true"]',
+    'div.ProseMirror[contenteditable="true"]',
+    '[data-testid="composer"] [contenteditable="true"]',
+    'form div[contenteditable="true"]',
     'textarea[placeholder*="Message"]',
     'textarea[placeholder*="发送"]',
 ]
 
 SEND_BUTTON_SELECTORS = [
     'button[data-testid="send-button"]',
+    'button[data-testid="fruitjuice-send-button"]',
     'button[aria-label*="Send"]',
     'button[aria-label*="发送"]',
 ]
@@ -70,7 +75,7 @@ def prepare_profile_dir(profile_dir: Path, reset_profile: bool) -> None:
     profile_dir.mkdir(parents=True, exist_ok=True)
 
 
-def first_visible(page: Page, selectors: Iterable[str]):
+def first_visible(page: Page, selectors: Iterable[str]) -> Locator | None:
     for sel in selectors:
         loc = page.locator(sel)
         if loc.count() > 0 and loc.first.is_visible():
@@ -78,7 +83,7 @@ def first_visible(page: Page, selectors: Iterable[str]):
     return None
 
 
-def wait_for_composer(page: Page, timeout_ms: int = 120_000):
+def wait_for_composer(page: Page, timeout_ms: int = 120_000) -> Locator:
     end_time = time.time() + timeout_ms / 1000
     while time.time() < end_time:
         composer = first_visible(page, COMPOSER_SELECTORS)
@@ -86,6 +91,18 @@ def wait_for_composer(page: Page, timeout_ms: int = 120_000):
             return composer
         time.sleep(0.3)
     raise TimeoutError("未找到输入框，请确认你已登录并进入可提问页面。")
+
+
+def set_prompt_text(page: Page, composer: Locator, text: str) -> None:
+    composer.click()
+    try:
+        composer.fill(text)
+        return
+    except Exception:
+        pass
+
+    page.keyboard.press("Control+A")
+    page.keyboard.type(text)
 
 
 def latest_assistant_text(page: Page) -> str:
@@ -102,8 +119,7 @@ def send_question_and_wait(page: Page, question: str, wait_seconds: int) -> str:
     composer = wait_for_composer(page)
     before = latest_assistant_text(page)
 
-    composer.click()
-    composer.fill(question)
+    set_prompt_text(page, composer, question)
 
     send_btn = first_visible(page, SEND_BUTTON_SELECTORS)
     if send_btn:
@@ -202,7 +218,8 @@ def ensure_ready(page: Page, start_timeout: int) -> None:
             "页面暂未就绪，可能卡在 Cloudflare/登录状态异常。\n"
             f"当前 URL: {page.url}\n"
             f"当前标题: {title}\n"
-            "请在浏览器里手动完成验证/登录，完成后回到终端按回车重试。",
+            "请在浏览器里打开一个新聊天（左侧 New chat）并确认底部输入框可见，"
+            "完成后回到终端按回车重试。",
             flush=True,
         )
         input()
